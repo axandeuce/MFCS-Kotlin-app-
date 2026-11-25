@@ -1,11 +1,10 @@
 package com.example.mfcs_project
 
-import android.content.Intent
-import androidx.compose.animation.AnimatedVisibility
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,10 +14,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -26,41 +27,25 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Cast
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ConfirmationNumber
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Smartphone
-import androidx.compose.material.icons.filled.SportsMma
-import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -69,576 +54,926 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
-import java.util.concurrent.TimeUnit
 
-private val BgBlack = Color(0xFF000000)
-private val CardDark = Color(0xFF161616)
-private val DrawerDark = Color(0xFF121212)
-private val AccentRed = Color(0xFFE50914)
-private val TextWhite = Color(0xFFFFFFFF)
-private val TextGray = Color(0xFFB0B0B0)
+private val UpBgBlack = Color(0xFF000000)
+private val UpCardDark = Color(0xFF141414)
+private val UpCardInner = Color(0xFF1E1E1E)
+private val UpAccentRed = Color(0xFFE50914)
+private val UpDeepRed = Color(0xFF4A070B)
+private val UpGold = Color(0xFFF59E0B)
+private val UpTextWhite = Color(0xFFFFFFFF)
+private val UpTextGray = Color(0xFFA6A6A6)
+private val UpTextMuted = Color(0xFF6E6E6E)
+private val UpBorderGray = Color(0xFF262626)
 
-data class FightEventItem(
-    val id: String,
-    val title: String,
-    val promotion: String,
-    val dateLabel: String,
-    val timeLabel: String,
-    val isPastOrLocked: Boolean,
-    val startsInSeconds: Long,
-    val accentColor: Color
-)
-
-data class EventDateGroup(
-    val sectionHeader: String,
-    val isPastSection: Boolean = false,
-    val events: List<FightEventItem>
-)
-
-data class LiveStreamItem(
-    val id: String,
-    val category: String,
-    val title: String,
-    val scheduleLabel: String,
-    val accentColor: Color
-)
-
-enum class BottomNavTab(val label: String, val icon: ImageVector) {
-    UPCOMING("UPCOMING", Icons.Default.CalendarMonth),
-    RESULTS("RESULTS", Icons.Default.SportsMma),
-    FIGHT_PASS("FIGHT PASS", Icons.Default.PlayCircle),
-    NEWS("NEWS", Icons.Default.Newspaper),
-    ATHLETES("ATHLETES", Icons.Default.Person)
+enum class UpcomingFilter(val label: String) {
+    ALL("ALL UPCOMING"),
+    TITLE_FIGHTS("TITLE BOUTS"),
+    PPV("PPV / VIP"),
+    THIS_MONTH("THIS MONTH")
 }
 
-private val drawerMenuItems = listOf(
-    "SEARCH",
-    "FIGHT LIBRARY",
-    "FIGHT PASS SCHEDULE",
-    "FIGHT PROMOTIONS",
-    "BRAZILIAN JIU-JITSU",
-    "SHOWS",
-    "CAN'T MISS",
-    "HISTORY",
-    "MFCS STORE",
-    "PREFERENCES"
+data class UpcomingFighterProfile(
+    val name: String,
+    val record: String,
+    val height: String,
+    val reach: String,
+    val rankBadge: String,
+    val cornerColor: Color
 )
 
-private val sampleEventGroups = listOf(
-    EventDateGroup(
-        sectionHeader = "FRIDAY, NOV 20 • NEXT 7 DAYS",
-        events = listOf(
-            FightEventItem(
-                id = "1",
-                title = "MFCS PRO SERIES: ULAANBAATAR",
-                promotion = "MFCS",
-                dateLabel = "11/20/26",
-                timeLabel = "8:00 PM",
-                isPastOrLocked = false,
-                startsInSeconds = 25_400L,
-                accentColor = Color(0xFF8B0000)
-            ),
-            FightEventItem(
-                id = "2",
-                title = "NOMAD FIGHT NIGHT 14",
-                promotion = "NOMAD FC",
-                dateLabel = "11/20/26",
-                timeLabel = "10:30 PM",
-                isPastOrLocked = false,
-                startsInSeconds = 34_400L,
-                accentColor = Color(0xFF2B2D42)
-            )
-        )
+data class UpcomingBoutMatchup(
+    val id: String,
+    val cardSegment: String,
+    val weightClass: String,
+    val rounds: String,
+    val isTitleBout: Boolean,
+    val redCorner: UpcomingFighterProfile,
+    val blueCorner: UpcomingFighterProfile
+)
+
+data class UpcomingEventPackage(
+    val id: String,
+    val eventCode: String,
+    val title: String,
+    val monthShort: String,
+    val dayNumber: String,
+    val fullDateAndTime: String,
+    val venue: String,
+    val countdownText: String,
+    val isPpv: Boolean,
+    val hasTitleFight: Boolean,
+    val isThisMonth: Boolean,
+    val ticketPriceLabel: String,
+    val bouts: List<UpcomingBoutMatchup>
+)
+
+private val mfcs12FightCard = listOf(
+    UpcomingBoutMatchup(
+        id = "up_b1",
+        cardSegment = "MAIN EVENT • WORLD TITLE",
+        weightClass = "LIGHTWEIGHT • 70 KG",
+        rounds = "5 ROUNDS",
+        isTitleBout = true,
+        redCorner = UpcomingFighterProfile("ДЭЛГЭРМӨРӨН", "15-2-0", "178 см", "182 см", "CHAMPION", Color(0xFFE50914)),
+        blueCorner = UpcomingFighterProfile("БАТ-ОРГИЛ", "13-1-0", "180 см", "184 см", "#1 CONTENDER", Color(0xFF3B82F6))
     ),
-    EventDateGroup(
-        sectionHeader = "SATURDAY, NOV 21",
-        events = listOf(
-            FightEventItem(
-                id = "3",
-                title = "MGL KICKBOXING GRAND PRIX",
-                promotion = "MGL KICK",
-                dateLabel = "11/21/26",
-                timeLabel = "6:00 PM",
-                isPastOrLocked = true,
-                startsInSeconds = 80_000L,
-                accentColor = Color(0xFF4A1515)
-            ),
-            FightEventItem(
-                id = "4",
-                title = "STEPPE WARRIORS CHAMPIONSHIP",
-                promotion = "STEPPE MMA",
-                dateLabel = "11/21/26",
-                timeLabel = "9:00 PM",
-                isPastOrLocked = false,
-                startsInSeconds = 92_000L,
-                accentColor = Color(0xFF1F2937)
-            ),
-            FightEventItem(
-                id = "5",
-                title = "KHAN GRAPPLING OPEN",
-                promotion = "KHAN BJJ",
-                dateLabel = "11/21/26",
-                timeLabel = "11:00 PM",
-                isPastOrLocked = true,
-                startsInSeconds = 100_000L,
-                accentColor = Color(0xFF3B1C1C)
-            )
-        )
+    UpcomingBoutMatchup(
+        id = "up_b2",
+        cardSegment = "CO-MAIN EVENT",
+        weightClass = "MIDDLEWEIGHT • 84 KG",
+        rounds = "3 ROUNDS",
+        isTitleBout = false,
+        redCorner = UpcomingFighterProfile("ЗОЛБОО", "11-2-0", "185 см", "189 см", "#2 RANKED", Color(0xFFE50914)),
+        blueCorner = UpcomingFighterProfile("ГАНЗОРИГ", "13-2-0", "186 см", "191 см", "#3 RANKED", Color(0xFF3B82F6))
     ),
-    EventDateGroup(
-        sectionHeader = "SUNDAY, NOV 22",
-        events = listOf(
-            FightEventItem(
-                id = "6",
-                title = "MFCS FINALS: HEAVYWEIGHT CLASH",
-                promotion = "MFCS",
-                dateLabel = "11/22/26",
-                timeLabel = "7:30 PM",
-                isPastOrLocked = false,
-                startsInSeconds = 165_000L,
-                accentColor = Color(0xFF6E0D12)
-            ),
-            FightEventItem(
-                id = "7",
-                title = "DARKHAN COMBAT NIGHT",
-                promotion = "DARKHAN FC",
-                dateLabel = "11/22/26",
-                timeLabel = "9:30 PM",
-                isPastOrLocked = true,
-                startsInSeconds = 172_000L,
-                accentColor = Color(0xFF262626)
-            )
-        )
+    UpcomingBoutMatchup(
+        id = "up_b3",
+        cardSegment = "MAIN CARD",
+        weightClass = "FEATHERWEIGHT • 66 KG",
+        rounds = "3 ROUNDS",
+        isTitleBout = false,
+        redCorner = UpcomingFighterProfile("МӨНХ-ЭРДЭНЭ", "16-4-0", "174 см", "177 см", "#1 RANKED", Color(0xFFE50914)),
+        blueCorner = UpcomingFighterProfile("БЯМБАДОРЖ", "10-1-0", "172 см", "175 см", "#4 RANKED", Color(0xFF3B82F6))
     ),
-    EventDateGroup(
-        sectionHeader = "PAST EVENTS • LAST 3 MONTHS (OCT 2026)",
-        isPastSection = true,
-        events = listOf(
-            FightEventItem(
-                id = "101",
-                title = "MFCS 09: CAPITAL SHOWDOWN",
-                promotion = "MFCS",
-                dateLabel = "10/18/26",
-                timeLabel = "REPLAY",
-                isPastOrLocked = true,
-                startsInSeconds = 0L,
-                accentColor = Color(0xFF3A1010)
-            ),
-            FightEventItem(
-                id = "102",
-                title = "ERDENET STRIKE LEAGUE 07",
-                promotion = "ERDENET FC",
-                dateLabel = "10/04/26",
-                timeLabel = "REPLAY",
-                isPastOrLocked = true,
-                startsInSeconds = 0L,
-                accentColor = Color(0xFF1C252C)
-            )
-        )
+    UpcomingBoutMatchup(
+        id = "up_b4",
+        cardSegment = "MAIN CARD",
+        weightClass = "WELTERWEIGHT • 77 KG",
+        rounds = "3 ROUNDS",
+        isTitleBout = false,
+        redCorner = UpcomingFighterProfile("ТҮВШИНЖАРГАЛ", "12-2-0", "182 см", "185 см", "#2 RANKED", Color(0xFFE50914)),
+        blueCorner = UpcomingFighterProfile("СҮХБАТ", "9-0-0", "181 см", "183 см", "UNDEFEATED", Color(0xFF3B82F6))
     ),
-    EventDateGroup(
-        sectionHeader = "PAST EVENTS • LAST 3 MONTHS (AUG – SEP 2026)",
-        isPastSection = true,
-        events = listOf(
-            FightEventItem(
-                id = "103",
-                title = "MFCS SUMMER CAGE INVITATIONAL",
-                promotion = "MFCS",
-                dateLabel = "09/12/26",
-                timeLabel = "REPLAY",
-                isPastOrLocked = true,
-                startsInSeconds = 0L,
-                accentColor = Color(0xFF451212)
-            ),
-            FightEventItem(
-                id = "104",
-                title = "GOBI FIGHT NIGHT 05",
-                promotion = "GOBI MMA",
-                dateLabel = "08/29/26",
-                timeLabel = "REPLAY",
-                isPastOrLocked = true,
-                startsInSeconds = 0L,
-                accentColor = Color(0xFF232323)
-            )
-        )
+    UpcomingBoutMatchup(
+        id = "up_b5",
+        cardSegment = "PRELIMS",
+        weightClass = "LIGHT HEAVYWEIGHT • 93 KG",
+        rounds = "3 ROUNDS",
+        isTitleBout = false,
+        redCorner = UpcomingFighterProfile("АЛТАНХУЯГ", "17-3-0", "190 см", "194 см", "#3 RANKED", Color(0xFFE50914)),
+        blueCorner = UpcomingFighterProfile("ОДБАЯР", "10-4-0", "188 см", "191 см", "#5 RANKED", Color(0xFF3B82F6))
+    ),
+    UpcomingBoutMatchup(
+        id = "up_b6",
+        cardSegment = "PRELIMS",
+        weightClass = "BANTAMWEIGHT • 61 KG",
+        rounds = "3 ROUNDS",
+        isTitleBout = false,
+        redCorner = UpcomingFighterProfile("ЭНХТҮВШИН", "11-5-0", "170 см", "172 см", "#6 RANKED", Color(0xFFE50914)),
+        blueCorner = UpcomingFighterProfile("ТӨГӨЛДӨР", "10-3-0", "171 см", "174 см", "#7 RANKED", Color(0xFF3B82F6))
+    ),
+    UpcomingBoutMatchup(
+        id = "up_b7",
+        cardSegment = "PRELIMS • OPENER",
+        weightClass = "FLYWEIGHT • 57 KG",
+        rounds = "3 ROUNDS",
+        isTitleBout = false,
+        redCorner = UpcomingFighterProfile("ЭРДЭНЭБОЛД", "8-1-0", "166 см", "169 см", "PROSPECT", Color(0xFFE50914)),
+        blueCorner = UpcomingFighterProfile("НАРАНБААТАР", "7-3-0", "167 см", "168 см", "CONTENDER", Color(0xFF3B82F6))
     )
 )
 
-private val sampleLiveStreams = listOf(
-    LiveStreamItem(
-        id = "live_1",
-        category = "MFCS Live 24/7",
-        title = "MFCS Ulaanbaatar: Main Card & Weigh-In",
-        scheduleLabel = "1:00 PM - 5:00 PM",
-        accentColor = Color(0xFF7A1212)
+private val upcomingEventsCatalog = listOf(
+    UpcomingEventPackage(
+        id = "up_ev_1",
+        eventCode = "MFCS 12 • PPV",
+        title = "WINTER CLASH: ULAANBAATAR",
+        monthShort = "NOV",
+        dayNumber = "28",
+        fullDateAndTime = "NOV 28, 2026 • 19:00 ULAT",
+        venue = "Steppe Arena • Ulaanbaatar",
+        countdownText = "03 ӨДӨР : 07 ЦАГ : 08 МИН",
+        isPpv = true,
+        hasTitleFight = true,
+        isThisMonth = true,
+        ticketPriceLabel = "VIP PPV • 25,000₮",
+        bouts = mfcs12FightCard
     ),
-    LiveStreamItem(
-        id = "live_2",
-        category = "Mongol MMA Promotions",
-        title = "Nomad FC vs Steppe MMA Prelims",
-        scheduleLabel = "5:15 PM - 8:30 PM",
-        accentColor = Color(0xFF1E293B)
+    UpcomingEventPackage(
+        id = "up_ev_2",
+        eventCode = "NOMAD 14",
+        title = "NOMAD FIGHT NIGHT: STEPPE FURY",
+        monthShort = "DEC",
+        dayNumber = "12",
+        fullDateAndTime = "DEC 12, 2026 • 20:00 ULAT",
+        venue = "ASA Arena • Ulaanbaatar",
+        countdownText = "17 ӨДӨР : 08 ЦАГ",
+        isPpv = false,
+        hasTitleFight = false,
+        isThisMonth = false,
+        ticketPriceLabel = "FIGHT PASS FREE",
+        bouts = mfcs12FightCard.mapIndexed { idx, b -> b.copy(id = "up2_$idx") }
+    ),
+    UpcomingEventPackage(
+        id = "up_ev_3",
+        eventCode = "MFCS 13 • PPV",
+        title = "NEW YEAR CHAMPIONSHIP FINALS",
+        monthShort = "DEC",
+        dayNumber = "27",
+        fullDateAndTime = "DEC 27, 2026 • 19:30 ULAT",
+        venue = "Buyant-Ukhaa Palace • UB",
+        countdownText = "32 ӨДӨР : 07 ЦАГ",
+        isPpv = true,
+        hasTitleFight = true,
+        isThisMonth = false,
+        ticketPriceLabel = "VIP PPV • 30,000₮",
+        bouts = mfcs12FightCard.mapIndexed { idx, b -> b.copy(id = "up3_$idx") }
+    ),
+    UpcomingEventPackage(
+        id = "up_ev_4",
+        eventCode = "DARKHAN 05",
+        title = "NORTHERN WARRIORS SHOWDOWN",
+        monthShort = "JAN",
+        dayNumber = "16",
+        fullDateAndTime = "JAN 16, 2027 • 19:00 ULAT",
+        venue = "Darkhan Sports Complex",
+        countdownText = "52 ӨДӨР",
+        isPpv = false,
+        hasTitleFight = false,
+        isThisMonth = false,
+        ticketPriceLabel = "FIGHT PASS FREE",
+        bouts = mfcs12FightCard.mapIndexed { idx, b -> b.copy(id = "up4_$idx") }
     )
 )
 
 @Composable
-fun MfcsEventsScreen() {
-    var selectedTab by remember { mutableStateOf(BottomNavTab.UPCOMING) }
-    var isAuthenticated by remember { mutableStateOf(false) }
-    var selectedPassTier by remember { mutableStateOf(FightPassTier.NONE) }
+fun MfcsEventsScreen(
+    onNavigateBack: (() -> Unit)? = null,
+    onNavigateToFightPass: (() -> Unit)? = null
+) {
+    var selectedFilter by remember { mutableStateOf(UpcomingFilter.ALL) }
+    var selectedEvent by remember { mutableStateOf<UpcomingEventPackage?>(null) }
+    val reminderStates = remember { mutableStateMapOf<String, Boolean>() }
 
-    val hasFullAccess = isAuthenticated || selectedPassTier != FightPassTier.NONE
+    BackHandler(enabled = selectedEvent != null) {
+        selectedEvent = null
+    }
 
-    var showBurgerMenu by remember { mutableStateOf(false) }
-    var showCastSheet by remember { mutableStateOf(false) }
-    var selectedCastIndex by remember { mutableIntStateOf(0) }
-    var showLiveScreen by remember { mutableStateOf(false) }
-    var activeCountdownEvent by remember { mutableStateOf<FightEventItem?>(null) }
-
-    var showAuthModal by remember { mutableStateOf(false) }
-    var authStartInLoginMode by remember { mutableStateOf(true) }
-    var pendingLiveOpenAfterAuth by remember { mutableStateOf(false) }
-
-    fun toggleBurgerMenu() {
-        val nextState = !showBurgerMenu
-        showBurgerMenu = nextState
-        if (nextState) {
-            showCastSheet = false
-            showLiveScreen = false
-            activeCountdownEvent = null
+    val filteredEvents = remember(selectedFilter) {
+        when (selectedFilter) {
+            UpcomingFilter.ALL -> upcomingEventsCatalog
+            UpcomingFilter.TITLE_FIGHTS -> upcomingEventsCatalog.filter { it.hasTitleFight }
+            UpcomingFilter.PPV -> upcomingEventsCatalog.filter { it.isPpv }
+            UpcomingFilter.THIS_MONTH -> upcomingEventsCatalog.filter { it.isThisMonth }
         }
     }
 
-    fun toggleCastSheet() {
-        val nextState = !showCastSheet
-        showCastSheet = nextState
-        if (nextState) {
-            showBurgerMenu = false
-            showLiveScreen = false
-            activeCountdownEvent = null
+    AnimatedContent(
+        targetState = selectedEvent,
+        transitionSpec = { fadeIn() togetherWith fadeOut() },
+        label = "upcoming_event_transition"
+    ) { currentEvent ->
+        if (currentEvent == null) {
+            UpcomingEventsOverview(
+                events = filteredEvents,
+                selectedFilter = selectedFilter,
+                onSelectFilter = { selectedFilter = it },
+                reminderStates = reminderStates,
+                onToggleReminder = { id ->
+                    reminderStates[id] = !(reminderStates[id] ?: false)
+                },
+                onOpenEvent = { selectedEvent = it },
+                onNavigateBack = onNavigateBack
+            )
+        } else {
+            UpcomingEventFightCardDetail(
+                event = currentEvent,
+                isReminded = reminderStates[currentEvent.id] ?: false,
+                onToggleReminder = {
+                    reminderStates[currentEvent.id] = !(reminderStates[currentEvent.id] ?: false)
+                },
+                onBack = { selectedEvent = null },
+                onNavigateToFightPass = onNavigateToFightPass
+            )
         }
     }
+}
 
-    fun toggleLiveScreen() {
-        val nextState = !showLiveScreen
-        showLiveScreen = nextState
-        if (nextState) {
-            showBurgerMenu = false
-            showCastSheet = false
-            activeCountdownEvent = null
-        }
-    }
+@Composable
+private fun UpcomingEventsOverview(
+    events: List<UpcomingEventPackage>,
+    selectedFilter: UpcomingFilter,
+    onSelectFilter: (UpcomingFilter) -> Unit,
+    reminderStates: Map<String, Boolean>,
+    onToggleReminder: (String) -> Unit,
+    onOpenEvent: (UpcomingEventPackage) -> Unit,
+    onNavigateBack: (() -> Unit)?
+) {
+    val heroEvent = events.firstOrNull()
+    val otherEvents = events.drop(1)
+    val navBarPadding = WindowInsets.navigationBars.asPaddingValues()
 
-    Scaffold(
-        containerColor = BgBlack,
-        topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(BgBlack)
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(
-                    onClick = { toggleBurgerMenu() },
-                    modifier = Modifier.size(36.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(UpBgBlack)
+    ) {
+        // Гүйлгэх үед дээд статус самбар/камер дээр ямар ч текст давхцахгүй байлгах хөдөлгөөнгүй толгой хэсэг
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(UpBgBlack)
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (onNavigateBack != null) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(UpCardDark)
+                        .border(1.dp, UpBorderGray, RoundedCornerShape(8.dp))
+                        .clickable { onNavigateBack() }
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
-                        tint = if (showBurgerMenu) AccentRed else TextWhite,
-                        modifier = Modifier.size(26.dp)
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = UpTextWhite,
+                        modifier = Modifier.size(14.dp)
                     )
-                }
-
-                Text(
-                    text = "MFCS",
-                    color = TextWhite,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 3.sp
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    IconButton(
-                        onClick = { toggleCastSheet() },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Cast,
-                            contentDescription = "Cast Devices",
-                            tint = if (showCastSheet) AccentRed else TextWhite,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(if (showLiveScreen) TextWhite else AccentRed)
-                            .clickable { toggleLiveScreen() }
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = "LIVE (2)",
-                            color = if (showLiveScreen) BgBlack else TextWhite,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Text(
+                        text = "BACK",
+                        color = UpTextWhite,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
             }
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = Color(0xFF0C0C0C),
-                contentColor = TextWhite
-            ) {
-                BottomNavTab.entries.forEach { tab ->
-                    val isSelected = selectedTab == tab
-                    NavigationBarItem(
-                        selected = isSelected,
-                        onClick = {
-                            selectedTab = tab
-                            showBurgerMenu = false
-                            showCastSheet = false
-                            showLiveScreen = false
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = tab.icon,
-                                contentDescription = tab.label,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        label = {
-                            Text(
-                                text = tab.label,
-                                fontSize = 9.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = AccentRed,
-                            selectedTextColor = AccentRed,
-                            unselectedIconColor = TextGray,
-                            unselectedTextColor = TextGray,
-                            indicatorColor = Color.Transparent
-                        )
-                    )
-                }
+
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "FIGHT CALENDAR & LINEUPS",
+                    color = UpAccentRed,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = "UPCOMING EVENTS",
+                    color = UpTextWhite,
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp
+                )
             }
         }
-    ) { innerPadding ->
-        Box(
+
+        HorizontalDivider(color = UpBorderGray.copy(alpha = 0.7f), thickness = 1.dp)
+
+        LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(BgBlack)
+                .weight(1f)
+                .fillMaxWidth()
+                .background(UpBgBlack),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 12.dp,
+                bottom = navBarPadding.calculateBottomPadding() + 24.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            when (selectedTab) {
-                BottomNavTab.UPCOMING -> {
-                    UpcomingEventsList(
-                        groups = sampleEventGroups,
-                        isAuthenticated = hasFullAccess,
-                        onEventClick = { event ->
-                            showBurgerMenu = false
-                            showCastSheet = false
-                            showLiveScreen = false
-                            if (event.isPastOrLocked && !hasFullAccess) {
-                                authStartInLoginMode = false
-                                pendingLiveOpenAfterAuth = false
-                                showAuthModal = true
-                            } else {
-                                activeCountdownEvent = event
-                            }
+            item(key = "upcoming_filters") {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(UpcomingFilter.entries) { filter ->
+                        val isSelected = filter == selectedFilter
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelected) UpAccentRed else UpCardDark)
+                                .border(
+                                    1.dp,
+                                    if (isSelected) UpAccentRed else UpBorderGray,
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .clickable { onSelectFilter(filter) }
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = filter.label,
+                                color = UpTextWhite,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
                         }
-                    )
-                }
-
-                BottomNavTab.RESULTS -> {
-                    MfcsResultsScreen()
-                }
-
-                BottomNavTab.FIGHT_PASS -> {
-                    MfcsFightPassScreen(
-                        selectedTier = selectedPassTier,
-                        onSelectTier = { newTier ->
-                            selectedPassTier = newTier
-                            if (newTier != FightPassTier.NONE) {
-                                isAuthenticated = true
-                            }
-                        }
-                    )
-                }
-
-                BottomNavTab.NEWS -> {
-                    MfcsNewsScreen()
-                }
-
-                BottomNavTab.ATHLETES -> {
-                    MfcsAthletesScreen()
-                }
-            }
-
-            if (showLiveScreen) {
-                LiveStreamsScreen(
-                    streams = sampleLiveStreams,
-                    isUnlocked = hasFullAccess,
-                    onBack = { showLiveScreen = false },
-                    onLockedStreamClick = {
-                        authStartInLoginMode = false
-                        pendingLiveOpenAfterAuth = true
-                        showAuthModal = true
                     }
-                )
+                }
             }
 
-            activeCountdownEvent?.let { event ->
-                EventCountdownOverlay(
-                    event = event,
-                    onClose = { activeCountdownEvent = null }
-                )
+            if (heroEvent != null) {
+                item(key = "hero_upcoming_${heroEvent.id}") {
+                    HeroUpcomingCard(
+                        event = heroEvent,
+                        isReminded = reminderStates[heroEvent.id] ?: false,
+                        onToggleReminder = { onToggleReminder(heroEvent.id) },
+                        onOpenFightCard = { onOpenEvent(heroEvent) }
+                    )
+                }
             }
 
-            if (showCastSheet) {
-                CastDevicesSheet(
-                    selectedIndex = selectedCastIndex,
-                    onSelectIndex = { selectedCastIndex = it },
-                    onClose = { showCastSheet = false }
-                )
+            if (otherEvents.isNotEmpty()) {
+                item(key = "more_events_title") {
+                    Text(
+                        text = "SCHEDULED SHOWS",
+                        color = UpTextGray,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 0.8.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+
+                items(otherEvents, key = { it.id }) { event ->
+                    ScheduledEventRowCard(
+                        event = event,
+                        isReminded = reminderStates[event.id] ?: false,
+                        onToggleReminder = { onToggleReminder(event.id) },
+                        onClick = { onOpenEvent(event) }
+                    )
+                }
             }
 
-            AnimatedVisibility(
-                visible = showBurgerMenu,
-                enter = fadeIn(),
-                exit = fadeOut()
+            item {
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroUpcomingCard(
+    event: UpcomingEventPackage,
+    isReminded: Boolean,
+    onToggleReminder: () -> Unit,
+    onOpenFightCard: () -> Unit
+) {
+    val mainBout = event.bouts.first()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(UpDeepRed, UpCardDark, UpBgBlack)
+                )
+            )
+            .border(1.dp, UpAccentRed, RoundedCornerShape(16.dp))
+            .clickable { onOpenFightCard() }
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.65f))
-                        .clickable { showBurgerMenu = false }
-                )
-            }
-
-            AnimatedVisibility(
-                visible = showBurgerMenu,
-                enter = slideInHorizontally(initialOffsetX = { -it }),
-                exit = slideOutHorizontally(targetOffsetX = { -it })
-            ) {
-                BurgerDrawerMenu(
-                    isAuthenticated = isAuthenticated,
-                    onItemClick = { showBurgerMenu = false },
-                    onLoginClick = {
-                        showBurgerMenu = false
-                        if (isAuthenticated) {
-                            isAuthenticated = false
-                            selectedPassTier = FightPassTier.NONE
-                        } else {
-                            authStartInLoginMode = true
-                            pendingLiveOpenAfterAuth = false
-                            showAuthModal = true
-                        }
-                    },
-                    onClose = { showBurgerMenu = false }
-                )
-            }
-
-            if (showAuthModal) {
-                AuthOverlayScreen(
-                    initialLoginMode = authStartInLoginMode,
-                    onAuthSuccess = {
-                        isAuthenticated = true
-                        showAuthModal = false
-                        if (pendingLiveOpenAfterAuth) {
-                            pendingLiveOpenAfterAuth = false
-                            showLiveScreen = true
-                        }
-                    },
-                    onClose = {
-                        pendingLiveOpenAfterAuth = false
-                        showAuthModal = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun UpcomingEventsList(
-    groups: List<EventDateGroup>,
-    isAuthenticated: Boolean,
-    onEventClick: (FightEventItem) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        items(groups, key = { it.sectionHeader }) { group ->
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = group.sectionHeader,
-                    color = if (group.isPastSection) TextGray else TextWhite,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.8.sp,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                )
-
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(UpAccentRed)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
-                    items(group.events, key = { it.id }) { event ->
-                        HorizontalEventCard(
-                            event = event,
-                            isUnlocked = !event.isPastOrLocked || isAuthenticated,
-                            onClick = { onEventClick(event) }
+                    Text(
+                        text = event.eventCode,
+                        color = UpTextWhite,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+
+                if (event.hasTitleFight) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocalFireDepartment,
+                            contentDescription = null,
+                            tint = UpGold,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "TITLE FIGHT",
+                            color = UpGold,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold
                         )
                     }
                 }
             }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Schedule,
+                    contentDescription = null,
+                    tint = UpAccentRed,
+                    modifier = Modifier.size(13.dp)
+                )
+                Text(
+                    text = event.countdownText,
+                    color = UpTextWhite,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = event.title,
+                color = UpTextWhite,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Black
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = UpTextGray,
+                    modifier = Modifier.size(13.dp)
+                )
+                Text(
+                    text = "${event.fullDateAndTime}  •  ${event.venue}",
+                    color = UpTextGray,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.Black.copy(alpha = 0.45f))
+                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            FaceOffFighterMini(
+                fighter = mainBout.redCorner,
+                modifier = Modifier.weight(1f)
+            )
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            ) {
+                Text(
+                    text = "VS",
+                    color = UpAccentRed,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Text(
+                    text = mainBout.weightClass.substringBefore("•").trim(),
+                    color = UpTextGray,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            FaceOffFighterMini(
+                fighter = mainBout.blueCorner,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(UpAccentRed)
+                    .clickable { onOpenFightCard() }
+                    .padding(vertical = 11.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "FULL FIGHT CARD (${event.bouts.size * 2} FIGHTERS)",
+                    color = UpTextWhite,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.4.sp
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isReminded) UpCardInner else Color.Black.copy(alpha = 0.6f))
+                    .border(
+                        1.dp,
+                        if (isReminded) UpGold else UpBorderGray,
+                        RoundedCornerShape(8.dp)
+                    )
+                    .clickable { onToggleReminder() }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = if (isReminded) Icons.Default.NotificationsActive else Icons.Default.NotificationsNone,
+                    contentDescription = null,
+                    tint = if (isReminded) UpGold else UpTextWhite,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = if (isReminded) "SAVED" else "REMIND",
+                    color = if (isReminded) UpGold else UpTextWhite,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun HorizontalEventCard(
-    event: FightEventItem,
-    isUnlocked: Boolean,
+private fun ScheduledEventRowCard(
+    event: UpcomingEventPackage,
+    isReminded: Boolean,
+    onToggleReminder: () -> Unit,
     onClick: () -> Unit
 ) {
-    Box(
+    val mainBout = event.bouts.first()
+
+    Row(
         modifier = Modifier
-            .width(235.dp)
-            .height(145.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(event.accentColor, CardDark, BgBlack)
-                )
-            )
-            .border(1.dp, Color(0xFF262626), RoundedCornerShape(8.dp))
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(UpCardDark)
+            .border(1.dp, UpBorderGray, RoundedCornerShape(14.dp))
             .clickable { onClick() }
-            .padding(12.dp)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .width(54.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(UpCardInner)
+                .border(1.dp, UpBorderGray, RoundedCornerShape(10.dp))
+                .padding(vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = event.monthShort,
+                color = UpAccentRed,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black
+            )
+            Text(
+                text = event.dayNumber,
+                color = UpTextWhite,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Black
+            )
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = event.eventCode,
+                    color = UpAccentRed,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    text = "• ${event.bouts.size} BOUTS",
+                    color = UpTextMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Text(
+                text = event.title,
+                color = UpTextWhite,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = "${mainBout.redCorner.name} vs ${mainBout.blueCorner.name}",
+                color = UpTextGray,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = event.venue,
+                color = UpTextMuted,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = if (isReminded) Icons.Default.NotificationsActive else Icons.Default.NotificationsNone,
+                contentDescription = "Remind",
+                tint = if (isReminded) UpGold else UpTextGray,
+                modifier = Modifier
+                    .size(20.dp)
+                    .clickable { onToggleReminder() }
+            )
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = UpAccentRed,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun UpcomingEventFightCardDetail(
+    event: UpcomingEventPackage,
+    isReminded: Boolean,
+    onToggleReminder: () -> Unit,
+    onBack: () -> Unit,
+    onNavigateToFightPass: (() -> Unit)?
+) {
+    val navBarPadding = WindowInsets.navigationBars.asPaddingValues()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(UpBgBlack)
+    ) {
+        // Дэлгэрэнгүй хэсгийн дээд тогтвортой хэсэг
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(UpBgBlack)
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(UpCardDark)
+                    .border(1.dp, UpBorderGray, RoundedCornerShape(8.dp))
+                    .clickable { onBack() }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = null,
+                    tint = UpTextWhite,
+                    modifier = Modifier.size(15.dp)
+                )
+                Text(
+                    text = "BACK TO UPCOMING",
+                    color = UpTextWhite,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isReminded) UpCardInner else UpCardDark)
+                    .border(1.dp, if (isReminded) UpGold else UpBorderGray, RoundedCornerShape(8.dp))
+                    .clickable { onToggleReminder() }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Icon(
+                    imageVector = if (isReminded) Icons.Default.NotificationsActive else Icons.Default.NotificationsNone,
+                    contentDescription = null,
+                    tint = if (isReminded) UpGold else UpTextWhite,
+                    modifier = Modifier.size(15.dp)
+                )
+                Text(
+                    text = if (isReminded) "REMINDER ON" else "NOTIFY ME",
+                    color = if (isReminded) UpGold else UpTextWhite,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+        }
+
+        HorizontalDivider(color = UpBorderGray.copy(alpha = 0.7f), thickness = 1.dp)
+
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .background(UpBgBlack),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 12.dp,
+                bottom = navBarPadding.calculateBottomPadding() + 24.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            item(key = "up_detail_header") {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "${event.eventCode} • ${event.bouts.size * 2} FIGHTERS LINEUP",
+                            color = UpAccentRed,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.8.sp
+                        )
+                        Text(
+                            text = event.title,
+                            color = UpTextWhite,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = null,
+                                tint = UpTextGray,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "${event.fullDateAndTime} • ${event.venue}",
+                                color = UpTextGray,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(UpDeepRed, UpCardDark)
+                                )
+                            )
+                            .border(1.dp, UpAccentRed.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+                            .then(
+                                if (onNavigateToFightPass != null) {
+                                    Modifier.clickable { onNavigateToFightPass() }
+                                } else {
+                                    Modifier
+                                }
+                            )
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ConfirmationNumber,
+                                contentDescription = null,
+                                tint = UpAccentRed,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "BROADCAST & ACCESS",
+                                    color = UpTextGray,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = event.ticketPriceLabel,
+                                    color = UpTextWhite,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = if (onNavigateToFightPass != null) "GET ACCESS ›" else "STARTS IN ${event.countdownText.substringBefore(":")}",
+                            color = UpAccentRed,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+            }
+
+            items(event.bouts, key = { it.id }) { bout ->
+                UpcomingMatchupCard(bout = bout)
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpcomingMatchupCard(bout: UpcomingBoutMatchup) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(UpCardDark)
+            .border(
+                width = if (bout.isTitleBout) 1.2.dp else 1.dp,
+                color = if (bout.isTitleBout) UpGold.copy(alpha = 0.7f) else UpBorderGray,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -646,711 +981,142 @@ private fun HorizontalEventCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = event.promotion,
-                color = AccentRed,
+                text = bout.cardSegment,
+                color = if (bout.isTitleBout) UpGold else UpAccentRed,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.6.sp
+            )
+            Text(
+                text = "${bout.weightClass} • ${bout.rounds}",
+                color = UpTextGray,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            FaceOffFighterMini(
+                fighter = bout.redCorner,
+                modifier = Modifier.weight(1f)
+            )
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            ) {
+                Text(
+                    text = "VS",
+                    color = UpTextWhite,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
+
+            FaceOffFighterMini(
+                fighter = bout.blueCorner,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(UpCardInner)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${bout.redCorner.height} / ${bout.redCorner.reach}",
+                color = UpTextWhite,
                 fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "ӨНДӨР / АЛД",
+                color = UpTextMuted,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
-                text = "${event.timeLabel}, ${event.dateLabel}",
-                color = TextWhite,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color.Black.copy(alpha = 0.65f))
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            )
-        }
-
-        if (event.isPastOrLocked) {
-            Icon(
-                imageVector = if (isUnlocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                contentDescription = if (isUnlocked) "Unlocked" else "Locked",
-                tint = TextWhite.copy(alpha = 0.9f),
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(26.dp)
-            )
-        }
-
-        Text(
-            text = event.title,
-            color = TextWhite,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth()
-        )
-    }
-}
-
-@Composable
-private fun LiveStreamsScreen(
-    streams: List<LiveStreamItem>,
-    isUnlocked: Boolean,
-    onBack: () -> Unit,
-    onLockedStreamClick: () -> Unit
-) {
-    var selectedUnlockedStream by remember { mutableStateOf<LiveStreamItem?>(null) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BgBlack)
-            .statusBarsPadding()
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = TextWhite
-                )
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "LIVE",
-                color = TextWhite,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.5.sp
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Spacer(modifier = Modifier.width(48.dp))
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (!isUnlocked) {
-            Text(
-                text = "Бүртгэл үүсгэсний дараа LIVE дамжуулалтын түгжээ нээгдэнэ.",
-                color = TextGray,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-        }
-
-        streams.forEach { stream ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(CardDark)
-                    .clickable {
-                        if (isUnlocked) {
-                            selectedUnlockedStream = stream
-                        } else {
-                            onLockedStreamClick()
-                        }
-                    }
-                    .padding(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(124.dp)
-                        .height(74.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(stream.accentColor, BgBlack)
-                            )
-                        )
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(AccentRed)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "Live",
-                            color = TextWhite,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Icon(
-                        imageVector = if (isUnlocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = TextWhite,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(22.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stream.category,
-                        color = TextGray,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = stream.title,
-                        color = TextWhite,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = stream.scheduleLabel,
-                        color = TextGray,
-                        fontSize = 11.sp
-                    )
-                }
-            }
-        }
-
-        selectedUnlockedStream?.let { activeStream ->
-            Spacer(modifier = Modifier.height(16.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF1B1B1B))
-                    .border(1.dp, AccentRed, RoundedCornerShape(8.dp))
-                    .padding(14.dp)
-            ) {
-                Column {
-                    Text(
-                        text = "NOW PLAYING (UNLOCKED)",
-                        color = AccentRed,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = activeStream.title,
-                        color = TextWhite,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "MFCS Live Stream • ${activeStream.scheduleLabel}",
-                        color = TextGray,
-                        fontSize = 12.sp
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CastDevicesSheet(
-    selectedIndex: Int,
-    onSelectIndex: (Int) -> Unit,
-    onClose: () -> Unit
-) {
-    val castOptions = listOf(
-        Triple("Android Phone", Icons.Default.Smartphone, 0),
-        Triple("Living Room TV", Icons.Default.Tv, 1),
-        Triple("Screen Mirror / Cast", Icons.Default.Cast, 2)
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.72f))
-            .clickable { onClose() }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                .background(DrawerDark)
-                .clickable(enabled = false, onClick = {})
-                .padding(horizontal = 20.dp, vertical = 18.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = TextWhite
-                    )
-                }
-                Text(
-                    text = "Cast Devices",
-                    color = TextWhite,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.width(32.dp))
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            castOptions.forEach { (title, icon, idx) ->
-                val isSelected = selectedIndex == idx
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSelectIndex(idx) }
-                        .padding(vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        tint = TextWhite,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = title,
-                        color = TextWhite,
-                        fontSize = 15.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (isSelected) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Selected",
-                            tint = TextWhite,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                if (idx < castOptions.lastIndex) {
-                    HorizontalDivider(color = Color(0xFF242424))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-        }
-    }
-}
-
-@Composable
-private fun BurgerDrawerMenu(
-    isAuthenticated: Boolean,
-    onItemClick: (String) -> Unit,
-    onLoginClick: () -> Unit,
-    onClose: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .fillMaxWidth(0.76f)
-            .background(DrawerDark)
-            .statusBarsPadding()
-            .clickable(enabled = false, onClick = {})
-            .padding(horizontal = 20.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "MFCS",
-                    color = AccentRed,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp
-                )
-                IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close Menu",
-                        tint = TextGray,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(vertical = 4.dp)
-            ) {
-                items(drawerMenuItems) { menuTitle ->
-                    val isSubtle = menuTitle == "PREFERENCES"
-                    Text(
-                        text = menuTitle,
-                        color = if (isSubtle) TextGray else TextWhite,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.6.sp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onItemClick(menuTitle) }
-                            .padding(vertical = 2.dp)
-                    )
-                }
-            }
-        }
-
-        Column {
-            HorizontalDivider(color = Color(0xFF262626), modifier = Modifier.padding(bottom = 12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (isAuthenticated) "LOG OUT" else "LOGIN",
-                    color = TextWhite,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.8.sp,
-                    modifier = Modifier.clickable { onLoginClick() }
-                )
-                Text(
-                    text = "20.0.0 (069)",
-                    color = TextGray,
-                    fontSize = 12.sp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AuthOverlayScreen(
-    initialLoginMode: Boolean,
-    onAuthSuccess: () -> Unit,
-    onClose: () -> Unit
-) {
-    var isLoginMode by remember(initialLoginMode) { mutableStateOf(initialLoginMode) }
-    var fullName by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF1A1A1A), Color.Black.copy(alpha = 0.96f))
-                )
-            )
-            .statusBarsPadding()
-            .padding(20.dp)
-    ) {
-        IconButton(
-            onClick = onClose,
-            modifier = Modifier.align(Alignment.TopStart)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Close",
-                tint = TextWhite,
-                modifier = Modifier.size(28.dp)
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "MFCS",
-                color = TextWhite,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 3.sp
-            )
-            Text(
-                text = if (isLoginMode) "Login" else "Sign Up",
-                color = TextWhite,
-                fontSize = 18.sp,
+                text = "${bout.blueCorner.height} / ${bout.blueCorner.reach}",
+                color = UpTextWhite,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
-
-            if (!isLoginMode) {
-                AuthInputField(
-                    value = fullName,
-                    onValueChange = { fullName = it },
-                    placeholder = "FULL NAME"
-                )
-            }
-
-            AuthInputField(
-                value = email,
-                onValueChange = { email = it },
-                placeholder = "EMAIL"
-            )
-
-            AuthInputField(
-                value = password,
-                onValueChange = { password = it },
-                placeholder = if (isLoginMode) "PASSWORD" else "CREATE PASSWORD",
-                isPassword = true
-            )
-
-            if (!isLoginMode) {
-                AuthInputField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
-                    placeholder = "CONFIRM PASSWORD",
-                    isPassword = true
-                )
-            }
-
-            Button(
-                onClick = { onAuthSuccess() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(4.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF222222))
-            ) {
-                Text(
-                    text = "SUBMIT",
-                    color = TextWhite,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (isLoginMode) {
-                TextButton(onClick = { /* Forgot password flow */ }) {
-                    Text(
-                        text = "Forgot password?",
-                        color = TextWhite,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = if (isLoginMode) "Don't have an account? " else "Already have an account? ",
-                    color = TextGray,
-                    fontSize = 13.sp
-                )
-                Text(
-                    text = if (isLoginMode) "SIGN UP" else "LOGIN",
-                    color = TextWhite,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { isLoginMode = !isLoginMode }
-                )
-            }
-
-            TextButton(onClick = onClose) {
-                Text(text = "Cancel", color = TextGray, fontSize = 14.sp)
-            }
         }
     }
 }
 
 @Composable
-private fun AuthInputField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    isPassword: Boolean = false
+private fun FaceOffFighterMini(
+    fighter: UpcomingFighterProfile,
+    modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        singleLine = true,
-        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
-        placeholder = { Text(text = placeholder, color = TextGray, fontSize = 12.sp) },
-        modifier = Modifier.fillMaxWidth(),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = TextWhite,
-            unfocusedTextColor = TextWhite,
-            focusedContainerColor = Color(0xFF1A1A1A).copy(alpha = 0.85f),
-            unfocusedContainerColor = Color(0xFF1A1A1A).copy(alpha = 0.75f),
-            focusedBorderColor = TextWhite,
-            unfocusedBorderColor = TextGray
-        )
-    )
-}
-
-@Composable
-private fun EventCountdownOverlay(
-    event: FightEventItem,
-    onClose: () -> Unit
-) {
-    val context = LocalContext.current
-    var remainingSeconds by remember(event.id) { mutableLongStateOf(event.startsInSeconds) }
-
-    LaunchedEffect(event.id) {
-        while (remainingSeconds > 0) {
-            delay(1000L)
-            remainingSeconds -= 1L
-        }
-    }
-
-    val days = TimeUnit.SECONDS.toDays(remainingSeconds)
-    val hours = TimeUnit.SECONDS.toHours(remainingSeconds) % 24
-    val minutes = TimeUnit.SECONDS.toMinutes(remainingSeconds) % 60
-    val seconds = remainingSeconds % 60
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(event.accentColor.copy(alpha = 0.85f), BgBlack, BgBlack)
-                )
-            )
-            .statusBarsPadding()
-            .padding(20.dp)
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        IconButton(
-            onClick = onClose,
-            modifier = Modifier.align(Alignment.TopStart)
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            fighter.cornerColor.copy(alpha = 0.35f),
+                            UpCardInner
+                        )
+                    )
+                )
+                .border(1.5.dp, fighter.cornerColor, CircleShape),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Close",
-                tint = TextWhite,
-                modifier = Modifier.size(28.dp)
+                imageVector = Icons.Default.Person,
+                contentDescription = fighter.name,
+                tint = UpTextWhite,
+                modifier = Modifier.size(36.dp)
             )
         }
 
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .clip(RoundedCornerShape(4.dp))
+                .background(fighter.cornerColor.copy(alpha = 0.2f))
+                .padding(horizontal = 6.dp, vertical = 2.dp)
         ) {
             Text(
-                text = "EVENT STARTS IN",
-                color = TextWhite,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.5.sp
+                text = fighter.rankBadge,
+                color = UpTextWhite,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.ExtraBold
             )
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CountdownUnitBox(value = days, label = "DAYS")
-                CountdownUnitBox(value = hours, label = "HOURS")
-                CountdownUnitBox(value = minutes, label = "MINUTES")
-                CountdownUnitBox(value = seconds, label = "SECONDS")
-            }
-
-            Spacer(modifier = Modifier.height(36.dp))
-
-            Text(
-                text = event.title,
-                color = TextWhite,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.align(Alignment.Start)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "${event.promotion} • ${event.dateLabel} • ${event.timeLabel}",
-                color = TextGray,
-                fontSize = 13.sp,
-                modifier = Modifier.align(Alignment.Start)
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, "MFCS: ${event.title} (${event.dateLabel})")
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, "Share Event"))
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(46.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CardDark)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = null,
-                        tint = TextWhite,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Share", color = TextWhite)
-                }
-
-                Button(
-                    onClick = {
-                        val calIntent = Intent(Intent.ACTION_INSERT).apply {
-                            data = android.provider.CalendarContract.Events.CONTENT_URI
-                            putExtra(android.provider.CalendarContract.Events.TITLE, event.title)
-                        }
-                        runCatching { context.startActivity(calIntent) }
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(46.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CardDark)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CalendarMonth,
-                        contentDescription = null,
-                        tint = TextWhite,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add to Calendar", color = TextWhite, maxLines = 1)
-                }
-            }
         }
-    }
-}
 
-@Composable
-private fun CountdownUnitBox(value: Long, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = String.format("%02d", value),
-            color = TextWhite,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Black
+            text = fighter.name,
+            color = UpTextWhite,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Black,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
+
         Text(
-            text = label,
-            color = TextGray,
-            fontSize = 10.sp,
+            text = fighter.record,
+            color = UpTextGray,
+            fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold
         )
     }

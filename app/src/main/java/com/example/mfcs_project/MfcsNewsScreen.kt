@@ -1,6 +1,5 @@
 package com.example.mfcs_project
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,40 +9,33 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,893 +44,395 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private val NewsBgBlack = Color(0xFF000000)
-private val NewsCardDark = Color(0xFF161616)
-private val NewsSurfaceDark = Color(0xFF1E1E1E)
+private val NewsCardDark = Color(0xFF141414)
+private val NewsSheetDark = Color(0xFF121212)
 private val NewsAccentRed = Color(0xFFE50914)
+private val NewsDeepRed = Color(0xFF4A070B)
+private val NewsGold = Color(0xFFF59E0B)
 private val NewsTextWhite = Color(0xFFFFFFFF)
-private val NewsTextGray = Color(0xFFA8A8A8)
+private val NewsTextGray = Color(0xFFA6A6A6)
+private val NewsTextMuted = Color(0xFF6E6E6E)
+private val NewsBorderGray = Color(0xFF262626)
 
 enum class NewsCategory(val label: String) {
-    ALL("All"),
-    MFCS("MFCS"),
-    MMA("MMA"),
-    FIGHTERS("Fighters"),
-    EVENTS("Events"),
-    RANKINGS("Rankings"),
-    INTERVIEWS("Interviews")
+    ALL("ALL NEWS"),
+    ANNOUNCEMENTS("BOUTS"),
+    TRAINING("CAMPS"),
+    PROMO("OFFICIAL")
 }
 
-enum class NewsCardStyle {
-    FEATURED,
-    STANDARD,
-    COMPACT
-}
-
-data class NewsArticleItem(
+data class MfcsNewsArticle(
     val id: String,
+    val badge: String,
     val title: String,
     val summary: String,
-    val bodyParagraphs: List<String>,
-    val category: NewsCategory,
-    val author: String,
-    val dateLabel: String,
+    val fullBody: String,
+    val timeAgo: String,
     val readTime: String,
-    val isBreaking: Boolean = false,
-    val isTrending: Boolean = false,
-    val cardStyle: NewsCardStyle = NewsCardStyle.STANDARD,
-    val bannerColor: Color,
-    val secondaryColor: Color,
-    val tags: List<String> = emptyList()
+    val category: NewsCategory,
+    val isFeatured: Boolean = false
 )
 
-private val sampleNewsArticles = listOf(
-    NewsArticleItem(
-        id = "n1",
-        title = "MFCS-ийн дараагийн том эвент албан ёсоор зарлагдлаа",
-        summary = "Улаанбаатар хотод болох MFCS 12 эвентийн гол тулаанчид болон хэвлэлийн бага хурлын тов зарлагдлаа.",
-        bodyParagraphs = listOf(
-            "Монголын тулааны спортын хөгжилд шинэ хуудас нээх MFCS 12 эвент Улаанбаатар хотын их танхимд зохион байгуулагдахаар албан ёсоор зарлагдлаа.",
-            "Үндсэн тулаанд хөнгөн жингийн шилдэг хоёр тулаанч Делгэрмөрөн болон Тэмүүжин нар октагонд учран зодолдох бөгөөд урьдчилсан болон үндсэн кардад нийт 20 тамирчин хүч үзнэ.",
-            "Хэвлэлийн бага хурал болон жин үзэх ёслол тэмцээний өмнөх өдөр шууд дамжуулалтаар үзэгчдэд хүрнэ."
-        ),
-        category = NewsCategory.MFCS,
-        author = "MFCS Editorial Desk",
-        dateLabel = "November 20",
-        readTime = "3 min read",
-        isBreaking = true,
-        isTrending = true,
-        cardStyle = NewsCardStyle.FEATURED,
-        bannerColor = Color(0xFF7D0A10),
-        secondaryColor = Color(0xFF1A1C24),
-        tags = listOf("MFCS 12", "Delgermurun", "Temuujin")
+private val mfcsNewsList = listOf(
+    MfcsNewsArticle(
+        id = "news_1",
+        badge = "MAIN EVENT",
+        title = "MFCS 12: ДЭЛГЭРМӨРӨН vs БАТ-ОРГИЛ ТУЛААН АЛБАН ЁСООР ЗАРЛАГДЛАА",
+        summary = "Хөнгөн жингийн аваргын бүсний төлөөх 5 үеийн оргил тулаан Улаанбаатар хотод болно.",
+        fullBody = "MFCS холбооноос дараагийн томоохон эвент болох MFCS 12 тэмцээний гол тулааныг албан ёсоор зарлалаа. Хурц техник, өндөр темпээрээ ялгардаг хоёр шилдэг тамирчин октагонд учраа таарч, 5 үеийн турш хүчээ үзнэ.\n\nЖин үзэх ёслол болон хэвлэлийн бага хурал тэмцээнээс нэг өдрийн өмнө олон нийтэд нээлттэй зохион байгуулагдана.",
+        timeAgo = "2 ЦАГИЙН ӨМНӨ",
+        readTime = "3 мин унших",
+        category = NewsCategory.ANNOUNCEMENTS,
+        isFeatured = true
     ),
-    NewsArticleItem(
-        id = "n2",
-        title = "Аваргын дараагийн өрсөлдөгч тодорлоо",
-        summary = "Хүнд ба хагас хүнд жингийн ангилалд сүүлийн 3 тулаанд дараалан ялалт байгуулсан тулаанч бүсийн төлөө өрсөлдөнө.",
-        bodyParagraphs = listOf(
-            "Сүүлийн хоёр эвентийн турш өрсөлдөгчөө эхний болон хоёрдугаар раундад буулган авсан тулаанч аваргын бүсний төлөөх албан ёсны саналыг хүлээн авлаа.",
-            "Дасгалжуулагчийн багийн мэдээлснээр бэлтгэл төлөвлөгөө эрчимтэй үргэлжилж байгаа бөгөөд энэ удаагийн бэлтгэлд дэвжээний барилдаан болон богино зайн цохилтын нарийвчлалд онцгой анхаарч байна."
-        ),
-        category = NewsCategory.FIGHTERS,
-        author = "Batbayar G.",
-        dateLabel = "2 hours ago",
-        readTime = "4 min read",
-        isTrending = true,
-        cardStyle = NewsCardStyle.STANDARD,
-        bannerColor = Color(0xFF4A1313),
-        secondaryColor = Color(0xFF141414),
-        tags = listOf("Title Contender", "Fighters", "MFCS")
+    MfcsNewsArticle(
+        id = "news_2",
+        badge = "TRAINING CAMP",
+        title = "ШИНЭБААТАР БЭЛТГЭЛИЙН СҮҮЛИЙН ДОЛОО ХОНОГТ ОРЛОО",
+        summary = "61 кг-ийн ангиллын тулаанч спарринг болон кардио ачааллыг дээд түвшинд хүргэжээ.",
+        fullBody = "Бэлтгэлийн баазад өнгөрүүлсэн долоон долоо хоногийн дараа тамирчны жингийн төлөвлөгөө яг хуваарийн дагуу явж байна. Дасгалжуулагчийн баг босоо цохилтын хамгаалалт болон клинчээс шилжих хөдөлгөөн дээр голлон ажиллаж байгаа ажээ.",
+        timeAgo = "5 ЦАГИЙН ӨМНӨ",
+        readTime = "2 мин унших",
+        category = NewsCategory.TRAINING
     ),
-    NewsArticleItem(
-        id = "n3",
-        title = "MFCS 15 Fight Card шинэчлэгдлээ",
-        summary = "Main Card болон Prelim тулаануудын жингийн ангилал, шинэ нэрс нэмэгдлээ.",
-        bodyParagraphs = listOf(
-            "MFCS 15 тэмцээний тулааны хуваарьт шинэ тулаанууд баталгаажлаа.",
-            "Үзэгчдийн хүлээлт өндөр байгаа тулаануудад залуу тамирчид болон туршлагатай ахмад тулаанчдын халз тулаан багтсан байна."
-        ),
-        category = NewsCategory.EVENTS,
-        author = "Matchmaking Team",
-        dateLabel = "30 min ago",
-        readTime = "2 min read",
-        isTrending = true,
-        cardStyle = NewsCardStyle.COMPACT,
-        bannerColor = Color(0xFF1F2937),
-        secondaryColor = Color(0xFF121212),
-        tags = listOf("Fight Card", "Events", "MFCS 15")
+    MfcsNewsArticle(
+        id = "news_3",
+        badge = "OFFICIAL",
+        title = "MFCS FIGHT PASS ДАХЬ АРХИВ ТУЛААНУУДЫН ЧАНАР ШИНЭЧЛЭГДЛЭЭ",
+        summary = "Өмнөх тэмцээнүүдийн сонгодог тулаануудыг илүү тод дүрс, цэвэр дуутайгаар үзэх боломжтой.",
+        fullBody = "Фэнүүдийн хүсэлтээр MFCS-ийн өмнөх дугааруудын онцлох тулаануудыг Fight Pass сан руу үе шаттайгаар байршуулж байна. Нокаут, сабмишн болон бүтэн тулааны бичлэгүүдийг ангиллаар нь хялбар шүүж үзэх боломжтой.",
+        timeAgo = "ӨЧИГДӨР",
+        readTime = "2 мин унших",
+        category = NewsCategory.PROMO
     ),
-    NewsArticleItem(
-        id = "n4",
-        title = "Pound-for-Pound болон жингийн зэрэглэлийн шинэчлэл",
-        summary = "Сүүлийн тэмцээний үр дүнгийн дараах тамирчдын эрэмбэ хэрхэн өөрчлөгдсөнийг харна уу.",
-        bodyParagraphs = listOf(
-            "Энэ долоо хоногийн үр дүнгээс хамааран хөнгөн болон хагас дунд жингийн эхний тавд өөрчлөлт орлоо.",
-            "Шинжээчдийн зөвлөл тулааны идэвх, ялалтын арга болон өрсөлдөгчийн чансааг харгалзан шинэ жагсаалтыг гаргасан байна."
-        ),
-        category = NewsCategory.RANKINGS,
-        author = "Analytics Desk",
-        dateLabel = "5 hours ago",
-        readTime = "5 min read",
-        cardStyle = NewsCardStyle.STANDARD,
-        bannerColor = Color(0xFF2B2D42),
-        secondaryColor = Color(0xFF121212),
-        tags = listOf("Rankings", "Pound-for-Pound", "MMA")
-    ),
-    NewsArticleItem(
-        id = "n5",
-        title = "Ярилцлага: 'Би өдөр бүр илүү хурдан, илүү ухаалаг болохын төлөө ажилладаг'",
-        summary = "Октагоны өмнөх онцгой ярилцлагад тулаанч сэтгэл зүйн бэлтгэл болон жин хасалтын талаар ярилаа.",
-        bodyParagraphs = listOf(
-            "Тулааны өмнөх сүүлийн долоо хоногт тамирчин сэтгэл зүйн төвлөрөл хамгийн чухал гэдгийг онцоллоо.",
-            "'Октагонд орсон мөчөөс эхлэн бүх зүйл тодорхой болдог. Бид бэлтгэл дээр хийсэн бүхнээ харуулахад бэлэн' хэмээн тэрээр хэлсэн юм."
-        ),
-        category = NewsCategory.INTERVIEWS,
-        author = "Saruul E.",
-        dateLabel = "Yesterday",
-        readTime = "6 min read",
-        cardStyle = NewsCardStyle.STANDARD,
-        bannerColor = Color(0xFF5C1616),
-        secondaryColor = Color(0xFF151515),
-        tags = listOf("Interview", "Mindset", "Fighters")
-    ),
-    NewsArticleItem(
-        id = "n6",
-        title = "Олон улсын MMA тэмцээнүүдийн энэ долоо хоногийн тойм",
-        summary = "Ази болон дэлхийн MMA дэвжээнд өрнөсөн онцлох үйл явдлууд болон нокаутуудын тойм.",
-        bodyParagraphs = listOf(
-            "Энэ амралтын өдрүүдэд дэлхийн хэд хэдэн томоохон MMA холбооны тэмцээнүүд болж, сонирхолтой шийдвэрүүд гарлаа.",
-            "Босоо тулаан болон партерын шилжилт хурдассан нь сүүлийн үеийн тулаануудын гол онцлог болж байна."
-        ),
-        category = NewsCategory.MMA,
-        author = "Combat Wire",
-        dateLabel = "2 days ago",
-        readTime = "4 min read",
-        cardStyle = NewsCardStyle.COMPACT,
-        bannerColor = Color(0xFF3A1C1C),
-        secondaryColor = Color(0xFF111111),
-        tags = listOf("MMA", "World MMA", "Recap")
-    ),
-    NewsArticleItem(
-        id = "n7",
-        title = "Бэлтгэлийн баазын шинэ тоног төхөөрөмж ба нөхөн сэргээлт",
-        summary = "Тамирчдын гэмтэл бэртлээс сэргийлэх, сэргэлтийг хурдасгах шинэ лаборатори ашиглалтад орлоо.",
-        bodyParagraphs = listOf(
-            "Орчин үеийн нөхөн сэргээх тоног төхөөрөмжүүд нь тамирчдын ачааллыг зөв хуваарилахад тусална.",
-            "Тэмцээний дараах сэргэлт сайжирснаар тамирчид илүү тогтвортой формтой тулалдах боломж бүрдэж байна."
-        ),
-        category = NewsCategory.MFCS,
-        author = "MFCS Performance",
-        dateLabel = "3 days ago",
-        readTime = "3 min read",
-        cardStyle = NewsCardStyle.COMPACT,
-        bannerColor = Color(0xFF1E3A5F),
-        secondaryColor = Color(0xFF111111),
-        tags = listOf("MFCS", "Recovery", "Training")
+    MfcsNewsArticle(
+        id = "news_4",
+        badge = "FIGHT CARD",
+        title = "MFCS 12 CO-MAIN: ХҮНД ЖИНГИЙН ШИНЭ СОРИЛТ",
+        summary = "Дараалсан ялалттай хоёр тулаанч октагонд анх удаа нүүр тулна.",
+        fullBody = "Хүнд жингийн ангилалд сүүлийн тулаануудаа эрт дуусгасан тамирчдын тулаан үзэгчдийн хүлээлтэд хэдийнээ ороод байна. Энэхүү тулааны ялагч дивизионы топ өрсөлдөгчтэй тулах эрхэд нэг алхам ойртох юм.",
+        timeAgo = "2 ӨДРИЙН ӨМНӨ",
+        readTime = "3 мин унших",
+        category = NewsCategory.ANNOUNCEMENTS
     )
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MfcsNewsScreen() {
     var selectedCategory by remember { mutableStateOf(NewsCategory.ALL) }
-    var searchQuery by remember { mutableStateOf("") }
-    var showSearchBar by remember { mutableStateOf(false) }
-    var showBookmarkedOnly by remember { mutableStateOf(false) }
-    var bookmarkedIds by remember { mutableStateOf(setOf("n1")) }
-    var selectedArticle by remember { mutableStateOf<NewsArticleItem?>(null) }
-    var visibleLatestCount by remember { mutableIntStateOf(5) }
+    var selectedArticle by remember { mutableStateOf<MfcsNewsArticle?>(null) }
 
-    val filteredArticles = remember(selectedCategory, searchQuery, showBookmarkedOnly, bookmarkedIds) {
-        sampleNewsArticles.filter { article ->
-            val matchesCategory = selectedCategory == NewsCategory.ALL || article.category == selectedCategory
-            val matchesBookmark = !showBookmarkedOnly || bookmarkedIds.contains(article.id)
-            val query = searchQuery.trim().lowercase()
-            val matchesSearch = query.isEmpty() ||
-                    article.title.lowercase().contains(query) ||
-                    article.summary.lowercase().contains(query) ||
-                    article.category.label.lowercase().contains(query) ||
-                    article.tags.any { it.lowercase().contains(query) }
-            matchesCategory && matchesBookmark && matchesSearch
+    val navBarPadding = WindowInsets.navigationBars.asPaddingValues()
+
+    val filteredArticles = remember(selectedCategory) {
+        if (selectedCategory == NewsCategory.ALL) {
+            mfcsNewsList
+        } else {
+            mfcsNewsList.filter { it.category == selectedCategory }
         }
     }
 
     val featuredArticle = remember(filteredArticles) {
-        filteredArticles.firstOrNull { it.isBreaking || it.cardStyle == NewsCardStyle.FEATURED }
-            ?: filteredArticles.firstOrNull()
+        filteredArticles.firstOrNull { it.isFeatured } ?: filteredArticles.firstOrNull()
     }
 
-    val trendingArticles = remember {
-        sampleNewsArticles.filter { it.isTrending }
+    val secondaryArticles = remember(filteredArticles, featuredArticle) {
+        if (featuredArticle == null) emptyList()
+        else filteredArticles.filter { it.id != featuredArticle.id }
     }
 
-    val latestArticles = remember(filteredArticles, featuredArticle, visibleLatestCount) {
-        val base = if (featuredArticle != null && filteredArticles.size > 1) {
-            filteredArticles.filterNot { it.id == featuredArticle.id }
-        } else {
-            filteredArticles
-        }
-        base.take(visibleLatestCount)
-    }
-
-    fun toggleBookmark(articleId: String) {
-        bookmarkedIds = if (bookmarkedIds.contains(articleId)) {
-            bookmarkedIds - articleId
-        } else {
-            bookmarkedIds + articleId
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(NewsBgBlack)
-    ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+    selectedArticle?.let { article ->
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { selectedArticle = null },
+            sheetState = sheetState,
+            containerColor = NewsSheetDark,
+            contentColor = NewsTextWhite,
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
         ) {
-            // News Header: MFCS logo, NEWS title, Search, Notification / Bookmarks
-            item(key = "news_header") {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(NewsAccentRed)
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "MFCS",
-                                    color = NewsTextWhite,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 1.2.sp
-                                )
-                            }
-                            Text(
-                                text = "NEWS",
-                                color = NewsTextWhite,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp
-                            )
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = {
-                                    showSearchBar = !showSearchBar
-                                    if (!showSearchBar) searchQuery = ""
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = if (showSearchBar) Icons.Default.Close else Icons.Default.Search,
-                                    contentDescription = "Search News",
-                                    tint = if (showSearchBar) NewsAccentRed else NewsTextWhite
-                                )
-                            }
-
-                            IconButton(
-                                onClick = { showBookmarkedOnly = !showBookmarkedOnly }
-                            ) {
-                                Icon(
-                                    imageVector = if (showBookmarkedOnly) Icons.Default.Bookmark else Icons.Default.Notifications,
-                                    contentDescription = "Bookmarks & Alerts",
-                                    tint = if (showBookmarkedOnly) NewsAccentRed else NewsTextWhite
-                                )
-                            }
-                        }
-                    }
-
-                    if (showSearchBar) {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            singleLine = true,
-                            placeholder = {
-                                Text(
-                                    text = "Search fighter, event, news...",
-                                    color = NewsTextGray,
-                                    fontSize = 13.sp
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = null,
-                                    tint = NewsTextGray
-                                )
-                            },
-                            trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Clear",
-                                            tint = NewsTextGray
-                                        )
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = NewsTextWhite,
-                                unfocusedTextColor = NewsTextWhite,
-                                focusedContainerColor = NewsCardDark,
-                                unfocusedContainerColor = NewsCardDark,
-                                focusedBorderColor = NewsAccentRed,
-                                unfocusedBorderColor = Color(0xFF2B2B2B)
-                            )
-                        )
-                    }
-
-                    if (showBookmarkedOnly) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(NewsSurfaceDark)
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Showing saved / bookmarked articles (${bookmarkedIds.size})",
-                                color = NewsTextWhite,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "Show All",
-                                color = NewsAccentRed,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.clickable { showBookmarkedOnly = false }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Category filter chips
-            item(key = "news_categories") {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(NewsCategory.entries, key = { it.name }) { category ->
-                        val isSelected = selectedCategory == category
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(if (isSelected) NewsTextWhite else NewsSurfaceDark)
-                                .border(
-                                    1.dp,
-                                    if (isSelected) NewsTextWhite else Color(0xFF2A2A2A),
-                                    RoundedCornerShape(20.dp)
-                                )
-                                .clickable { selectedCategory = category }
-                                .padding(horizontal = 14.dp, vertical = 7.dp)
-                        ) {
-                            Text(
-                                text = category.label,
-                                color = if (isSelected) NewsBgBlack else NewsTextWhite,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Featured / Breaking News
-            featuredArticle?.let { hero ->
-                item(key = "news_featured_${hero.id}") {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = if (hero.isBreaking) "BREAKING NEWS" else "FEATURED STORY",
-                            color = NewsAccentRed,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.sp
-                        )
-
-                        FeaturedNewsHeroCard(
-                            article = hero,
-                            isBookmarked = bookmarkedIds.contains(hero.id),
-                            onReadClick = { selectedArticle = hero },
-                            onBookmarkClick = { toggleBookmark(hero.id) }
-                        )
-                    }
-                }
-            }
-
-            // Trending News
-            if (selectedCategory == NewsCategory.ALL && searchQuery.isBlank() && !showBookmarkedOnly) {
-                item(key = "news_trending") {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.LocalFireDepartment,
-                                contentDescription = null,
-                                tint = NewsAccentRed,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = "TRENDING",
-                                color = NewsTextWhite,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 0.8.sp
-                            )
-                        }
-
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(trendingArticles, key = { "tr_${it.id}" }) { article ->
-                                TrendingNewsCard(
-                                    article = article,
-                                    onClick = { selectedArticle = article }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Latest News section
-            item(key = "news_latest_header") {
-                Text(
-                    text = "LATEST NEWS",
-                    color = NewsTextWhite,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 0.8.sp,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-
-            if (latestArticles.isEmpty()) {
-                item(key = "news_empty") {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Тохирох мэдээ олдсонгүй.",
-                            color = NewsTextGray,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            } else {
-                items(latestArticles, key = { "latest_${it.id}" }) { article ->
-                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        when (article.cardStyle) {
-                            NewsCardStyle.FEATURED -> FeaturedNewsHeroCard(
-                                article = article,
-                                isBookmarked = bookmarkedIds.contains(article.id),
-                                onReadClick = { selectedArticle = article },
-                                onBookmarkClick = { toggleBookmark(article.id) }
-                            )
-                            NewsCardStyle.STANDARD -> StandardNewsCard(
-                                article = article,
-                                isBookmarked = bookmarkedIds.contains(article.id),
-                                onClick = { selectedArticle = article },
-                                onBookmarkClick = { toggleBookmark(article.id) }
-                            )
-                            NewsCardStyle.COMPACT -> CompactNewsCard(
-                                article = article,
-                                isBookmarked = bookmarkedIds.contains(article.id),
-                                onClick = { selectedArticle = article },
-                                onBookmarkClick = { toggleBookmark(article.id) }
-                            )
-                        }
-                    }
-                }
-
-                if (visibleLatestCount < sampleNewsArticles.size) {
-                    item(key = "news_load_more") {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 6.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = { visibleLatestCount += 4 },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(44.dp),
-                                shape = RoundedCornerShape(6.dp)
-                            ) {
-                                Text(
-                                    text = "Load more",
-                                    color = NewsTextWhite,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // News Detail Screen
-        selectedArticle?.let { article ->
-            val relatedArticles = remember(article.id) {
-                sampleNewsArticles
-                    .filterNot { it.id == article.id }
-                    .sortedByDescending { if (it.category == article.category) 1 else 0 }
-                    .take(3)
-            }
-
-            NewsArticleDetailScreen(
-                article = article,
-                relatedArticles = relatedArticles,
-                isBookmarked = bookmarkedIds.contains(article.id),
-                onToggleBookmark = { toggleBookmark(article.id) },
-                onSelectRelated = { selectedArticle = it },
-                onBack = { selectedArticle = null }
-            )
-        }
-    }
-}
-
-@Composable
-private fun FeaturedNewsHeroCard(
-    article: NewsArticleItem,
-    isBookmarked: Boolean,
-    onReadClick: () -> Unit,
-    onBookmarkClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(NewsCardDark)
-            .border(1.dp, Color(0xFF262626), RoundedCornerShape(10.dp))
-            .clickable { onReadClick() }
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(195.dp)
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(article.bannerColor, article.secondaryColor, NewsBgBlack)
-                    )
-                )
-                .padding(14.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopStart),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (article.isBreaking) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(NewsAccentRed)
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "BREAKING NEWS",
-                                color = NewsTextWhite,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color.Black.copy(alpha = 0.7f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = article.category.label.uppercase(),
-                            color = NewsTextWhite,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                IconButton(
-                    onClick = onBookmarkClick,
-                    modifier = Modifier.size(34.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                        contentDescription = "Bookmark",
-                        tint = if (isBookmarked) NewsAccentRed else NewsTextWhite
-                    )
-                }
-            }
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.BottomStart)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 18.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "MFCS EDITORIAL",
-                    color = NewsAccentRed,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(NewsAccentRed.copy(alpha = 0.2f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = article.badge,
+                            color = NewsAccentRed,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Хаах",
+                        tint = NewsTextGray,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clickable { selectedArticle = null }
+                    )
+                }
+
                 Text(
                     text = article.title,
                     color = NewsTextWhite,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Black,
-                    lineHeight = 22.sp,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(
-                text = article.summary,
-                color = NewsTextGray,
-                fontSize = 12.sp,
-                lineHeight = 17.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${article.dateLabel} · ${article.readTime}",
-                    color = NewsTextGray,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold
+                    lineHeight = 23.sp
                 )
 
-                Button(
-                    onClick = onReadClick,
-                    shape = RoundedCornerShape(4.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = NewsAccentRed),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Read article",
-                        color = NewsTextWhite,
-                        fontSize = 12.sp,
+                        text = article.timeAgo,
+                        color = NewsGold,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "• ${article.readTime}",
+                        color = NewsTextMuted,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
+
+                HorizontalDivider(color = NewsBorderGray)
+
+                Text(
+                    text = article.fullBody,
+                    color = NewsTextGray,
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
-}
 
-@Composable
-private fun StandardNewsCard(
-    article: NewsArticleItem,
-    isBookmarked: Boolean,
-    onClick: () -> Unit,
-    onBookmarkClick: () -> Unit
-) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(NewsCardDark)
-            .border(1.dp, Color(0xFF222222), RoundedCornerShape(8.dp))
-            .clickable { onClick() }
+            .fillMaxSize()
+            .background(NewsBgBlack)
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(142.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(article.bannerColor, article.secondaryColor)
-                    )
-                )
-                .padding(12.dp)
+                .background(NewsBgBlack)
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(NewsAccentRed)
-                    .padding(horizontal = 7.dp, vertical = 3.dp)
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = "${article.category.label.uppercase()} NEWS",
+                    text = "FIGHT WIRE & UPDATES",
+                    color = NewsAccentRed,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = "MFCS NEWS",
                     color = NewsTextWhite,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.ExtraBold
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp
                 )
             }
 
-            IconButton(
-                onClick = onBookmarkClick,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(32.dp)
-            ) {
-                Icon(
-                    imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                    contentDescription = "Bookmark",
-                    tint = if (isBookmarked) NewsAccentRed else NewsTextWhite,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = article.title,
-                color = NewsTextWhite,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 20.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = article.summary,
-                color = NewsTextGray,
-                fontSize = 12.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = "${article.dateLabel} · ${article.readTime}",
-                color = NewsTextGray,
-                fontSize = 11.sp
-            )
-        }
-    }
-}
-
-@Composable
-private fun CompactNewsCard(
-    article: NewsArticleItem,
-    isBookmarked: Boolean,
-    onClick: () -> Unit,
-    onBookmarkClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(NewsCardDark)
-            .border(1.dp, Color(0xFF202020), RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(76.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(article.bannerColor, article.secondaryColor)
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = article.category.label.take(3).uppercase(),
-                color = NewsTextWhite,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Black
-            )
-        }
-
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = article.title,
-                color = NewsTextWhite,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 17.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = "${article.category.label} · ${article.dateLabel} · ${article.readTime}",
-                color = NewsTextGray,
-                fontSize = 11.sp
-            )
-        }
-
-        IconButton(
-            onClick = onBookmarkClick,
-            modifier = Modifier.size(32.dp)
-        ) {
             Icon(
-                imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                contentDescription = "Bookmark",
-                tint = if (isBookmarked) NewsAccentRed else NewsTextGray,
-                modifier = Modifier.size(19.dp)
+                imageVector = Icons.Default.Newspaper,
+                contentDescription = null,
+                tint = NewsTextGray,
+                modifier = Modifier.size(22.dp)
             )
+        }
+
+        HorizontalDivider(color = NewsBorderGray.copy(alpha = 0.7f), thickness = 1.dp)
+
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .background(NewsBgBlack),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 12.dp,
+                bottom = navBarPadding.calculateBottomPadding() + 24.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item(key = "news_categories") {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(NewsCategory.entries) { category ->
+                        val isSelected = category == selectedCategory
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelected) NewsAccentRed else NewsCardDark)
+                                .border(
+                                    1.dp,
+                                    if (isSelected) NewsAccentRed else NewsBorderGray,
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .clickable { selectedCategory = category }
+                                .padding(horizontal = 13.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = category.label,
+                                color = NewsTextWhite,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.4.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            featuredArticle?.let { hero ->
+                item(key = "hero_${hero.id}") {
+                    FeaturedNewsCard(
+                        article = hero,
+                        onClick = { selectedArticle = hero }
+                    )
+                }
+            }
+
+            items(secondaryArticles, key = { it.id }) { article ->
+                NewsArticleRowCard(
+                    article = article,
+                    onClick = { selectedArticle = article }
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(20.dp)) }
         }
     }
 }
 
 @Composable
-private fun TrendingNewsCard(
-    article: NewsArticleItem,
+private fun FeaturedNewsCard(
+    article: MfcsNewsArticle,
     onClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
-            .width(220.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(NewsCardDark)
-            .border(1.dp, Color(0xFF242424), RoundedCornerShape(8.dp))
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(NewsDeepRed, NewsCardDark)
+                )
+            )
+            .border(1.dp, NewsAccentRed.copy(alpha = 0.75f), RoundedCornerShape(16.dp))
             .clickable { onClick() }
-            .padding(12.dp),
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(NewsAccentRed)
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = article.badge,
+                    color = NewsTextWhite,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp
+                )
+            }
+
+            Text(
+                text = article.timeAgo,
+                color = NewsGold,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Text(
+            text = article.title,
+            color = NewsTextWhite,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Black,
+            lineHeight = 22.sp,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Text(
+            text = article.summary,
+            color = NewsTextGray,
+            fontSize = 12.sp,
+            lineHeight = 17.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Row(
+            modifier = Modifier.padding(top = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "ДЭЛГЭРЭНГҮЙ УНШИХ",
+                color = NewsTextWhite,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = NewsAccentRed,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun NewsArticleRowCard(
+    article: MfcsNewsArticle,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(NewsCardDark)
+            .border(1.dp, NewsBorderGray, RoundedCornerShape(14.dp))
+            .clickable { onClick() }
+            .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Row(
@@ -946,222 +440,56 @@ private fun TrendingNewsCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = article.category.label.uppercase(),
-                color = NewsAccentRed,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
-            Text(
-                text = article.readTime,
-                color = NewsTextGray,
-                fontSize = 10.sp
-            )
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(NewsAccentRed.copy(alpha = 0.16f))
+                    .padding(horizontal = 7.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = article.badge,
+                    color = NewsAccentRed,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Schedule,
+                    contentDescription = null,
+                    tint = NewsTextMuted,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = "${article.timeAgo} • ${article.readTime}",
+                    color = NewsTextMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
 
         Text(
             text = article.title,
             color = NewsTextWhite,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            lineHeight = 17.sp,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.ExtraBold,
+            lineHeight = 19.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
 
         Text(
-            text = article.dateLabel,
+            text = article.summary,
             color = NewsTextGray,
-            fontSize = 10.sp
+            fontSize = 12.sp,
+            lineHeight = 17.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
         )
-    }
-}
-
-@Composable
-private fun NewsArticleDetailScreen(
-    article: NewsArticleItem,
-    relatedArticles: List<NewsArticleItem>,
-    isBookmarked: Boolean,
-    onToggleBookmark: () -> Unit,
-    onSelectRelated: (NewsArticleItem) -> Unit,
-    onBack: () -> Unit
-) {
-    val context = LocalContext.current
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(NewsBgBlack)
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(bottom = 32.dp)
-    ) {
-        // Back button болон зөвхөн Share + Bookmark action
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = NewsTextWhite
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, "MFCS News: ${article.title}")
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Share",
-                        tint = NewsTextWhite
-                    )
-                }
-
-                IconButton(onClick = onToggleBookmark) {
-                    Icon(
-                        imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                        contentDescription = "Bookmark",
-                        tint = if (isBookmarked) NewsAccentRed else NewsTextWhite
-                    )
-                }
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = article.category.label.uppercase(),
-                color = NewsAccentRed,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
-            )
-
-            Text(
-                text = article.title,
-                color = NewsTextWhite,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Black,
-                lineHeight = 28.sp
-            )
-
-            Text(
-                text = article.summary,
-                color = NewsTextGray,
-                fontSize = 14.sp,
-                lineHeight = 20.sp
-            )
-
-            Text(
-                text = "By ${article.author} · ${article.dateLabel} · ${article.readTime}",
-                color = NewsTextGray,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            // Hero image box
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(205.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(article.bannerColor, article.secondaryColor, NewsBgBlack)
-                        )
-                    )
-                    .border(1.dp, Color(0xFF262626), RoundedCornerShape(10.dp))
-                    .padding(14.dp)
-            ) {
-                Text(
-                    text = "MFCS · ${article.category.label.uppercase()}",
-                    color = NewsTextWhite.copy(alpha = 0.85f),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.BottomStart)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Article body paragraphs
-            article.bodyParagraphs.forEach { paragraph ->
-                Text(
-                    text = paragraph,
-                    color = NewsTextWhite.copy(alpha = 0.92f),
-                    fontSize = 15.sp,
-                    lineHeight = 24.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = Color(0xFF242424))
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Related articles
-            Text(
-                text = "RELATED ARTICLES",
-                color = NewsTextWhite,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 0.8.sp
-            )
-
-            relatedArticles.forEach { related ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(NewsCardDark)
-                        .clickable { onSelectRelated(related) }
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(64.dp)
-                            .height(48.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    colors = listOf(related.bannerColor, related.secondaryColor)
-                                )
-                            )
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = related.title,
-                            color = NewsTextWhite,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "${related.category.label} · ${related.readTime}",
-                            color = NewsTextGray,
-                            fontSize = 11.sp
-                        )
-                    }
-                }
-            }
-        }
     }
 }

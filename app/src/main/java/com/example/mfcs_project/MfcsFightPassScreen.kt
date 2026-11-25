@@ -9,30 +9,32 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Hd
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,502 +46,653 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private val FpBgBlack = Color(0xFF000000)
 private val FpCardDark = Color(0xFF141414)
-private val FpCardElevated = Color(0xFF1C1C1C)
+private val FpCardInner = Color(0xFF1E1E1E)
 private val FpAccentRed = Color(0xFFE50914)
-private val FpDarkRed = Color(0xFF420609)
+private val FpDeepRed = Color(0xFF4A070B)
+private val FpGold = Color(0xFFF59E0B)
+private val FpGreen = Color(0xFF10B981)
 private val FpTextWhite = Color(0xFFFFFFFF)
 private val FpTextGray = Color(0xFFA6A6A6)
+private val FpTextMuted = Color(0xFF6E6E6E)
+private val FpBorderGray = Color(0xFF262626)
 
-enum class FightPassTier(
-    val titleMn: String,
-    val subtitleMn: String,
-    val priceText: String,
-    val includesAllPpvFree: Boolean
-) {
-    NONE(
-        titleMn = "Идэвхтэй багцгүй",
-        subtitleMn = "Энгийн хэрэглэгч",
-        priceText = "0₮",
-        includesAllPpvFree = false
-    ),
-    MONTHLY(
-        titleMn = "САРЫН ЭРХ (MONTHLY)",
-        subtitleMn = "Хэдийд ч цуцлах боломжтой",
-        priceText = "29,900₮ / сар",
-        includesAllPpvFree = false
-    ),
-    ANNUAL_VIP(
-        titleMn = "ЖИЛИЙН ЭРХ (ANNUAL VIP)",
-        subtitleMn = "12 сар + PPV тусгай эвентүүд үнэгүй",
-        priceText = "249,000₮ / жил",
-        includesAllPpvFree = true
-    )
+enum class FightPassCategory(val label: String) {
+    ALL("ALL VIDEOS"),
+    FULL_FIGHTS("FULL FIGHTS"),
+    KNOCKOUTS("KNOCKOUTS"),
+    SUBMISSIONS("SUBMISSIONS"),
+    ORIGINALS("BACKSTAGE")
 }
 
-data class PpvEventItem(
+data class FightPassVideoItem(
     val id: String,
-    val code: String,
     val title: String,
-    val mainEvent: String,
-    val dateLabel: String,
-    val standalonePrice: String,
-    val monthlyDiscountPrice: String,
-    val isPpvExclusive: Boolean,
-    val accentColor: Color
+    val subtitle: String,
+    val eventTag: String,
+    val duration: String,
+    val viewsLabel: String,
+    val category: FightPassCategory,
+    val isVipOnly: Boolean,
+    val youtubeUrl: String,
+    val accentGradientStart: Color
 )
 
-private val samplePpvEvents = listOf(
-    PpvEventItem(
-        id = "ppv_1",
-        code = "MFCS 12 • PPV",
-        title = "ULAANBAATAR CHAMPIONSHIP NIGHT",
-        mainEvent = "Дэлгэрмөрөн vs Тэмүүжин • Хөнгөн жингийн аваргын бүс",
-        dateLabel = "11/28/26 • 8:00 PM",
-        standalonePrice = "29,900₮",
-        monthlyDiscountPrice = "14,900₮ (-50%)",
-        isPpvExclusive = true,
-        accentColor = Color(0xFF7D0910)
+private val fightPassVideos = listOf(
+    FightPassVideoItem(
+        id = "fp_1",
+        title = "ШИНЭБААТАР vs ОДСҮРЭН — 61KG TITLE BOUT",
+        subtitle = "MGL-1 FC #22 • Аваргын бүсний төлөөх тулаан (2025.06.14)",
+        eventTag = "MGL-1 #22",
+        duration = "21:35",
+        viewsLabel = "2.5K+ VIEWS",
+        category = FightPassCategory.FULL_FIGHTS,
+        isVipOnly = false,
+        youtubeUrl = "https://youtu.be/jf2DsdSyug0?si=LquL64RUmOV3A8Gm",
+        accentGradientStart = Color(0xFF5C0A0E)
     ),
-    PpvEventItem(
-        id = "ppv_2",
-        code = "MFCS 13 • PPV",
-        title = "STEPPE KINGS: HEAVYWEIGHT WAR",
-        mainEvent = "Золбоо vs Дөлгөөн • Хүнд жингийн халз тулаан",
-        dateLabel = "12/19/26 • 9:00 PM",
-        standalonePrice = "29,900₮",
-        monthlyDiscountPrice = "14,900₮ (-50%)",
-        isPpvExclusive = true,
-        accentColor = Color(0xFF4A0E12)
+    FightPassVideoItem(
+        id = "fp_2",
+        title = "ДЭЛГЭРМӨРӨН vs ТЭМҮҮЖИН — FULL TITLE FIGHT",
+        subtitle = "MFCS 11: Main Event • Lightweight Championship",
+        eventTag = "MFCS 11",
+        duration = "14:28",
+        viewsLabel = "48.2K VIEWS",
+        category = FightPassCategory.FULL_FIGHTS,
+        isVipOnly = true,
+        youtubeUrl = "https://youtu.be/jf2DsdSyug0?si=LquL64RUmOV3A8Gm",
+        accentGradientStart = Color(0xFF3B1315)
     ),
-    PpvEventItem(
-        id = "ppv_3",
-        code = "FIGHT NIGHT",
-        title = "MFCS FIGHT NIGHT: NOMAD RISING",
-        mainEvent = "Мөнхбаяр vs Бат-Эрдэнэ • Дунд жин",
-        dateLabel = "11/21/26 • 8:00 PM",
-        standalonePrice = "19,900₮",
-        monthlyDiscountPrice = "ҮНЭГҮЙ (Багцад орсон)",
-        isPpvExclusive = false,
-        accentColor = Color(0xFF1F2937)
+    FightPassVideoItem(
+        id = "fp_3",
+        title = "БАТ-ОРГИЛ vs АНХБАЯР — REAR NAKED CHOKE",
+        subtitle = "MFCS 11: Co-Main Event • Full Fight Replay",
+        eventTag = "VIP REPLAY",
+        duration = "06:12",
+        viewsLabel = "21.9K VIEWS",
+        category = FightPassCategory.SUBMISSIONS,
+        isVipOnly = true,
+        youtubeUrl = "https://youtu.be/jf2DsdSyug0?si=LquL64RUmOV3A8Gm",
+        accentGradientStart = Color(0xFF1E293B)
+    ),
+    FightPassVideoItem(
+        id = "fp_4",
+        title = "MFCS 12: COUNTDOWN & TRAINING CAMP",
+        subtitle = "Бэлтгэлийн баримтат нэвтрүүлэг ба ярилцлага",
+        eventTag = "ORIGINAL",
+        duration = "22:10",
+        viewsLabel = "34.1K VIEWS",
+        category = FightPassCategory.ORIGINALS,
+        isVipOnly = false,
+        youtubeUrl = "https://youtu.be/jf2DsdSyug0?si=LquL64RUmOV3A8Gm",
+        accentGradientStart = Color(0xFF2D1B08)
     )
 )
 
 @Composable
-fun MfcsFightPassScreen(
-    selectedTier: FightPassTier = FightPassTier.NONE,
-    onSelectTier: (FightPassTier) -> Unit = {}
-) {
-    var localTier by remember(selectedTier) { mutableStateOf(selectedTier) }
-    var activeWatchingPpv by remember { mutableStateOf<PpvEventItem?>(null) }
-    var statusBannerMessage by remember { mutableStateOf<String?>(null) }
+fun MfcsFightPassScreen() {
+    var selectedCategory by remember { mutableStateOf(FightPassCategory.ALL) }
+    var activeVideo by remember { mutableStateOf(fightPassVideos.first()) }
+    var isVipUnlocked by remember { mutableStateOf(false) }
+    var currentUser by remember { mutableStateOf<AuthUserSession?>(null) }
+    var showAuthSheet by remember { mutableStateOf(false) }
+    var openPaymentAfterAuth by remember { mutableStateOf(false) }
+    var showCheckoutSheet by remember { mutableStateOf(false) }
 
-    fun updateTier(newTier: FightPassTier) {
-        localTier = newTier
-        onSelectTier(newTier)
-        statusBannerMessage = when (newTier) {
-            FightPassTier.ANNUAL_VIP -> "ЖИЛИЙН VIP ЭРХ идэвхэжлээ! Бүх PPV тусгай эвентүүд 100% үнэгүй нээгдлээ."
-            FightPassTier.MONTHLY -> "САРЫН ЭРХ идэвхэжлээ! Fight Night болон архив нээгдэж, PPV эвентүүд 50% хөнгөлөлттэй боллоо."
-            FightPassTier.NONE -> null
+    val navBarPadding = WindowInsets.navigationBars.asPaddingValues()
+    val canPlayActiveVideo = !activeVideo.isVipOnly || isVipUnlocked
+
+    val requestVipCheckout = {
+        if (currentUser != null) {
+            showCheckoutSheet = true
+        } else {
+            openPaymentAfterAuth = true
+            showAuthSheet = true
         }
     }
 
-    Box(
+    val vipPlan = remember {
+        CheckoutPlan(
+            code = "VIP_MONTHLY",
+            title = "MFCS VIP FIGHT PASS",
+            description = "Бүх шууд дамжуулалт (PPV), 1080p HD давталт ба архив",
+            priceFormatted = "19,900₮ / САР"
+        )
+    }
+
+    val filteredVideos = remember(selectedCategory) {
+        if (selectedCategory == FightPassCategory.ALL) {
+            fightPassVideos
+        } else {
+            fightPassVideos.filter { it.category == selectedCategory }
+        }
+    }
+
+    if (showAuthSheet) {
+        MfcsAuthBottomSheet(
+            onDismiss = {
+                showAuthSheet = false
+                openPaymentAfterAuth = false
+            },
+            onAuthSuccess = { session ->
+                currentUser = session
+                showAuthSheet = false
+                if (openPaymentAfterAuth) {
+                    openPaymentAfterAuth = false
+                    showCheckoutSheet = true
+                }
+            }
+        )
+    }
+
+    if (showCheckoutSheet) {
+        MfcsPaymentBottomSheet(
+            plan = vipPlan,
+            onDismiss = { showCheckoutSheet = false },
+            onPaymentSuccess = { _, _ ->
+                isVipUnlocked = true
+            }
+        )
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(FpBgBlack)
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(FpBgBlack)
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. VIP STREAMING & STATS HERO CARD (Зураг дээрх шиг)
-            item(key = "fp_hero_card") {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "LIVE STREAM & ON-DEMAND",
+                    color = FpAccentRed,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = "MFCS FIGHT PASS",
+                    color = FpTextWhite,
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(FpDarkRed, FpCardDark, FpBgBlack)
-                            )
-                        )
-                        .border(1.dp, Color(0xFF4A1215), RoundedCornerShape(14.dp))
-                        .padding(18.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color(0xFF2B090B))
-                                .border(1.dp, FpAccentRed, RoundedCornerShape(4.dp))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "VIP STREAMING & STATS",
-                                color = FpAccentRed,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 0.8.sp
-                            )
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(FpCardDark)
+                        .border(1.dp, FpBorderGray, RoundedCornerShape(8.dp))
+                        .clickable {
+                            if (currentUser == null) {
+                                openPaymentAfterAuth = false
+                                showAuthSheet = true
+                            } else {
+                                currentUser = null
+                                isVipUnlocked = false
+                            }
                         }
-
-                        Text(
-                            text = "MFCS FIGHT PASS",
-                            color = FpTextWhite,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 0.8.sp
-                        )
-
-                        Text(
-                            text = "Монголын холимог тулааны бүх шууд дамжуулалт, 4K камерын сонголт болон тулаанчдын нарийвчилсан статистик датаг хязгааргүй үзээрэй.",
-                            color = FpTextGray,
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(2.dp))
-
-                        FightPassBenefitRow("Бүх MFCS Fight Night болон Аваргын тулаан шууд")
-                        FightPassBenefitRow("Үе тус бүрийн бодит цагийн цохилт, барилдааны дата")
-                        FightPassBenefitRow("Өмнөх бүх тэмцээний бүрэн архив (1080p / 60fps)")
-                    }
-                }
-            }
-
-            // Идэвхтэй багцын төлөвийн мэдэгдэл
-            statusBannerMessage?.let { msg ->
-                item(key = "fp_status_banner") {
+                        .padding(horizontal = 9.dp, vertical = 6.dp)
+                ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF1F0A0B))
-                            .border(1.dp, FpAccentRed, RoundedCornerShape(10.dp))
-                            .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.CheckCircle,
+                            imageVector = Icons.Default.Person,
                             contentDescription = null,
-                            tint = FpAccentRed,
-                            modifier = Modifier.size(20.dp)
+                            tint = if (currentUser != null) FpGold else FpTextGray,
+                            modifier = Modifier.size(13.dp)
                         )
                         Text(
-                            text = msg,
+                            text = currentUser?.displayName ?: "НЭВТРЭХ",
                             color = FpTextWhite,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f)
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isVipUnlocked) FpGreen.copy(alpha = 0.18f) else FpDeepRed)
+                        .border(
+                            1.dp,
+                            if (isVipUnlocked) FpGreen else FpAccentRed,
+                            RoundedCornerShape(8.dp)
+                        )
+                        .clickable {
+                            if (isVipUnlocked) {
+                                isVipUnlocked = false
+                            } else {
+                                requestVipCheckout()
+                            }
+                        }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isVipUnlocked) Icons.Default.CheckCircle else Icons.Default.Star,
+                            contentDescription = null,
+                            tint = if (isVipUnlocked) FpGreen else FpGold,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = if (isVipUnlocked) "VIP ACTIVE" else "GO VIP",
+                            color = FpTextWhite,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black
                         )
                     }
                 }
             }
+        }
 
-            // 2. БАГЦ СОНГОХ ГАРЧИГ
-            item(key = "fp_choose_plan_title") {
+        HorizontalDivider(color = FpBorderGray.copy(alpha = 0.7f), thickness = 1.dp)
+
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .background(FpBgBlack),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 12.dp,
+                bottom = navBarPadding.calculateBottomPadding() + 24.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            item(key = "featured_player") {
+                FeaturedYouTubePlayerCard(
+                    video = activeVideo,
+                    canPlay = canPlayActiveVideo,
+                    isLoggedIn = currentUser != null,
+                    onUnlockClick = { requestVipCheckout() }
+                )
+            }
+
+            item(key = "fp_categories") {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(FightPassCategory.entries) { category ->
+                        val isSelected = category == selectedCategory
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelected) FpAccentRed else FpCardDark)
+                                .border(
+                                    1.dp,
+                                    if (isSelected) FpAccentRed else FpBorderGray,
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .clickable { selectedCategory = category }
+                                .padding(horizontal = 13.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = category.label,
+                                color = FpTextWhite,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.4.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            item(key = "library_heading") {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "БАГЦ СОНГОХ",
+                        text = "FIGHT LIBRARY (${filteredVideos.size})",
                         color = FpTextGray,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 0.8.sp
                     )
-                    if (localTier != FightPassTier.NONE) {
-                        Text(
-                            text = "Идэвхтэй: ${localTier.titleMn}",
-                            color = FpAccentRed,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            // 3. САРЫН ЭРХ (MONTHLY) CARD
-            item(key = "fp_monthly_card") {
-                val isCurrent = localTier == FightPassTier.MONTHLY
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(FpCardDark)
-                        .border(
-                            width = if (isCurrent) 1.5.dp else 1.dp,
-                            color = if (isCurrent) FpAccentRed else Color(0xFF262626),
-                            shape = RoundedCornerShape(14.dp)
-                        )
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "САРЫН ЭРХ (MONTHLY)",
-                                color = FpTextWhite,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Хэдийд ч цуцлах боломжтой • PPV 50% хөнгөлөлттэй",
-                                color = FpTextGray,
-                                fontSize = 12.sp
-                            )
-                        }
-
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "29,900₮",
-                                color = FpTextWhite,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                            Text(
-                                text = "/ сар",
-                                color = FpTextGray,
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-
-                    Button(
-                        onClick = { updateTier(FightPassTier.MONTHLY) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isCurrent) Color(0xFF2E2E2E) else Color(0xFF242424)
-                        )
-                    ) {
-                        Text(
-                            text = if (isCurrent) "ИДЭВХТЭЙ БАГЦ (САРЫН ЭРХ)" else "ЭНЭ БАГЦЫГ СОНГОХ",
-                            color = FpTextWhite,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-                }
-            }
-
-            // 4. ЖИЛИЙН ЭРХ (ANNUAL VIP) CARD + "ХАМГИЙН ХЭМНЭЛТТЭЙ • -30%" BADGE
-            item(key = "fp_annual_vip_card") {
-                val isCurrent = localTier == FightPassTier.ANNUAL_VIP
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 10.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(FpCardDark)
-                            .border(
-                                width = if (isCurrent) 2.dp else 1.5.dp,
-                                color = FpAccentRed,
-                                shape = RoundedCornerShape(14.dp)
-                            )
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "ЖИЛИЙН ЭРХ (ANNUAL VIP)",
-                                    color = FpTextWhite,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Black
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "12 сар + PPV тусгай эвентүүд үнэгүй",
-                                    color = FpTextGray,
-                                    fontSize = 12.sp
-                                )
-                            }
-
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = "249,000₮",
-                                    color = FpAccentRed,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Black
-                                )
-                                Text(
-                                    text = "358,800₮",
-                                    color = FpTextGray,
-                                    fontSize = 11.sp,
-                                    style = TextStyle(textDecoration = TextDecoration.LineThrough)
-                                )
-                            }
-                        }
-
-                        Button(
-                            onClick = { updateTier(FightPassTier.ANNUAL_VIP) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = FpAccentRed)
-                        ) {
-                            Text(
-                                text = if (isCurrent) "VIP ЭРХ ИДЭВХЖСЭН БАЙНА ✓" else "VIP ЭРХ ИДЭВХЖҮҮЛЭХ",
-                                color = FpTextWhite,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 0.6.sp
-                            )
-                        }
-                    }
-
-                    // Баруун дээд улаан хэмнэлтийн badge
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(end = 14.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(FpAccentRed)
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "ХАМГИЙН ХЭМНЭЛТТЭЙ • -30%",
-                            color = FpTextWhite,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-                }
-            }
-
-            // 5. БАГЦААС ХАМААРЧ НЭЭГДЭХ PPV ТУСГАЙ ЭВЕНТҮҮД
-            item(key = "fp_ppv_header") {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    HorizontalDivider(color = Color(0xFF222222), modifier = Modifier.padding(vertical = 4.dp))
                     Text(
-                        text = "PPV ТУСГАЙ ЭВЕНТҮҮД БА ЭРХИЙН ТӨЛӨВ",
-                        color = FpTextWhite,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 0.6.sp
-                    )
-                    Text(
-                        text = when (localTier) {
-                            FightPassTier.ANNUAL_VIP -> "Таны ANNUAL VIP багцад доорх бүх PPV эвентүүд 100% үнэгүй багтсан."
-                            FightPassTier.MONTHLY -> "Таны MONTHLY багцад Fight Night үнэгүй, PPV тусгай эвентүүд 50% хөнгөлөлттэй."
-                            FightPassTier.NONE -> "Багц сонгосноор PPV эвентүүдийг үнэгүй эсвэл хөнгөлөлттэй үзэх эрх нээгдэнэ."
-                        },
-                        color = FpTextGray,
-                        fontSize = 12.sp
+                        text = "YOUTUBE HD",
+                        color = FpAccentRed,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black
                     )
                 }
             }
 
-            items(samplePpvEvents, key = { it.id }) { ppvEvent ->
-                val isUnlockedForUser = when {
-                    localTier == FightPassTier.ANNUAL_VIP -> true
-                    localTier == FightPassTier.MONTHLY && !ppvEvent.isPpvExclusive -> true
-                    else -> false
-                }
-
-                val accessBadgeText = when {
-                    localTier == FightPassTier.ANNUAL_VIP -> "ANNUAL VIP • ҮНЭГҮЙ НЭЭЛТТЭЙ"
-                    localTier == FightPassTier.MONTHLY && !ppvEvent.isPpvExclusive -> "MONTHLY • БАГЦАД ОРСОН"
-                    localTier == FightPassTier.MONTHLY -> "MONTHLY ХӨНГӨЛӨЛТ: ${ppvEvent.monthlyDiscountPrice}"
-                    else -> "PPV ҮНЭ: ${ppvEvent.standalonePrice} (VIP-Д ҮНЭГҮЙ)"
-                }
-
-                PpvWorthCard(
-                    event = ppvEvent,
-                    isUnlocked = isUnlockedForUser,
-                    accessBadgeText = accessBadgeText,
-                    onActionClick = {
-                        if (isUnlockedForUser) {
-                            activeWatchingPpv = ppvEvent
-                        } else {
-                            // PPV үзэхийн тулд Annual VIP багцыг идэвхжүүлэх санал
-                            updateTier(FightPassTier.ANNUAL_VIP)
+            items(filteredVideos, key = { it.id }) { video ->
+                FightPassVideoRowCard(
+                    video = video,
+                    isCurrent = video.id == activeVideo.id,
+                    isVipUnlocked = isVipUnlocked,
+                    onClick = {
+                        activeVideo = video
+                        if (video.isVipOnly && !isVipUnlocked) {
+                            requestVipCheckout()
                         }
                     }
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-        }
+            item(key = "vip_membership_banner") {
+                VipPassSubscriptionCard(
+                    isVipUnlocked = isVipUnlocked,
+                    isLoggedIn = currentUser != null,
+                    onActivateClick = {
+                        if (!isVipUnlocked) {
+                            requestVipCheckout()
+                        }
+                    }
+                )
+            }
 
-        // PPV Нээгдсэн үед үзэх тоглуулагч
-        activeWatchingPpv?.let { ppv ->
-            PpvPlayerOverlay(
-                event = ppv,
-                tier = localTier,
-                onBack = { activeWatchingPpv = null }
-            )
+            item { Spacer(modifier = Modifier.height(20.dp)) }
         }
     }
 }
 
 @Composable
-private fun FightPassBenefitRow(text: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Check,
-            contentDescription = null,
-            tint = FpAccentRed,
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            text = text,
-            color = FpTextWhite.copy(alpha = 0.92f),
-            fontSize = 12.sp
-        )
-    }
-}
-
-@Composable
-private fun PpvWorthCard(
-    event: PpvEventItem,
-    isUnlocked: Boolean,
-    accessBadgeText: String,
-    onActionClick: () -> Unit
+private fun FeaturedYouTubePlayerCard(
+    video: FightPassVideoItem,
+    canPlay: Boolean,
+    isLoggedIn: Boolean,
+    onUnlockClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(FpCardDark)
+            .border(1.dp, FpAccentRed.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(video.accentGradientStart, Color(0xFF0D0D0D), FpBgBlack)
+                    )
+                )
+        ) {
+            if (canPlay) {
+                YouTubeFightPlayer(
+                    youtubeUrl = video.youtubeUrl,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable { onUnlockClick() }
+                        .padding(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.TopCenter),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(FpGold.copy(alpha = 0.2f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "VIP LOCKED • ${video.eventTag}",
+                                color = FpGold,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Hd,
+                                contentDescription = null,
+                                tint = FpTextWhite,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = video.duration,
+                                color = FpTextWhite,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(FpGold)
+                                .border(2.dp, Color.White.copy(alpha = 0.85f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "Unlock VIP",
+                                tint = Color.Black,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+
+                        Text(
+                            text = if (isLoggedIn) "ТӨЛБӨР ТӨЛӨӨД ҮЗЭХ" else "НЭВТРЭЭД ТӨЛБӨР ТӨЛӨХ",
+                            color = FpTextWhite,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.6.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = video.title,
+                color = FpTextWhite,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = video.subtitle,
+                color = FpTextGray,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun FightPassVideoRowCard(
+    video: FightPassVideoItem,
+    isCurrent: Boolean,
+    isVipUnlocked: Boolean,
+    onClick: () -> Unit
+) {
+    val locked = video.isVipOnly && !isVipUnlocked
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isCurrent) FpCardInner else FpCardDark)
             .border(
                 1.dp,
-                if (isUnlocked) Color(0xFF2E7D32) else Color(0xFF262626),
+                if (isCurrent) FpAccentRed else FpBorderGray,
                 RoundedCornerShape(12.dp)
             )
-            .clickable { onActionClick() }
-            .padding(14.dp),
+            .clickable { onClick() }
+            .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(108.dp)
+                .height(66.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(video.accentGradientStart, FpBgBlack)
+                    )
+                )
+                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                .padding(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .align(Alignment.Center)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.65f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (locked) Icons.Default.Lock else Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = if (locked) FpGold else FpTextWhite,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Color.Black.copy(alpha = 0.8f))
+                    .padding(horizontal = 4.dp, vertical = 1.dp)
+            ) {
+                Text(
+                    text = video.duration,
+                    color = FpTextWhite,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(if (video.isVipOnly) FpGold.copy(alpha = 0.2f) else FpAccentRed.copy(alpha = 0.2f))
+                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                ) {
+                    Text(
+                        text = if (video.isVipOnly) "VIP" else "FREE",
+                        color = if (video.isVipOnly) FpGold else FpAccentRed,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Visibility,
+                        contentDescription = null,
+                        tint = FpTextMuted,
+                        modifier = Modifier.size(11.dp)
+                    )
+                    Text(
+                        text = video.viewsLabel,
+                        color = FpTextMuted,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Text(
+                text = video.title,
+                color = FpTextWhite,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = video.subtitle,
+                color = FpTextGray,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun VipPassSubscriptionCard(
+    isVipUnlocked: Boolean,
+    isLoggedIn: Boolean,
+    onActivateClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(FpDeepRed, FpCardDark)
+                )
+            )
+            .border(1.dp, FpGold.copy(alpha = 0.65f), RoundedCornerShape(16.dp))
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(
@@ -547,181 +700,51 @@ private fun PpvWorthCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(event.accentColor)
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
-            ) {
-                Text(
-                    text = event.code,
-                    color = FpTextWhite,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(
-                    imageVector = if (isUnlocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                    contentDescription = null,
-                    tint = if (isUnlocked) Color(0xFF4CAF50) else FpAccentRed,
-                    modifier = Modifier.size(15.dp)
-                )
-                Text(
-                    text = if (isUnlocked) "ҮЗЭХ ЭРХТЭЙ" else "ТҮГЖЭЭТЭЙ",
-                    color = if (isUnlocked) Color(0xFF4CAF50) else FpAccentRed,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-
-        Text(
-            text = event.title,
-            color = FpTextWhite,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Black,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Text(
-            text = event.mainEvent,
-            color = FpTextGray,
-            fontSize = 12.sp
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             Text(
-                text = accessBadgeText,
-                color = if (isUnlocked) Color(0xFF81C784) else FpTextWhite,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f)
+                text = "MFCS VIP FIGHT PASS",
+                color = FpGold,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.8.sp
             )
-
-            Button(
-                onClick = onActionClick,
-                shape = RoundedCornerShape(6.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isUnlocked) Color(0xFF1E3A24) else FpAccentRed
-                ),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Icon(
-                    imageVector = if (isUnlocked) Icons.Default.PlayArrow else Icons.Default.Star,
-                    contentDescription = null,
-                    tint = FpTextWhite,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = if (isUnlocked) "ШУУД ҮЗЭХ" else "VIP-ЭЭР НЭЭХ",
-                    color = FpTextWhite,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PpvPlayerOverlay(
-    event: PpvEventItem,
-    tier: FightPassTier,
-    onBack: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FpBgBlack)
-            .statusBarsPadding()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Буцах",
-                    tint = FpTextWhite
-                )
-            }
-            Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = event.code,
-                color = FpAccentRed,
+                text = "19,900₮ / САР",
+                color = FpTextWhite,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Black
             )
-            Spacer(modifier = Modifier.weight(1f))
-            Spacer(modifier = Modifier.width(48.dp))
         }
+
+        Text(
+            text = if (isLoggedIn) {
+                "Бүх шууд дамжуулалт (PPV), 1080p HD давталт, болон тамирчдын хөшигний арын нэвтрүүлгийг хязгааргүй үзэх эрх."
+            } else {
+                "VIP эрх худалдан авахын тулд эхлээд бүртгэлээрээ нэвтэрнэ үү."
+            },
+            color = FpTextGray,
+            fontSize = 12.sp
+        )
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(event.accentColor, FpCardElevated, FpBgBlack)
-                    )
-                )
-                .border(1.dp, FpAccentRed, RoundedCornerShape(12.dp)),
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (isVipUnlocked) FpGreen else FpAccentRed)
+                .clickable { onActivateClick() }
+                .padding(vertical = 11.dp),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Play",
-                    tint = FpTextWhite,
-                    modifier = Modifier.size(52.dp)
-                )
-                Text(
-                    text = "4K 60FPS STREAMING • ${tier.titleMn}",
-                    color = FpTextWhite,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-
-        Text(
-            text = event.title,
-            color = FpTextWhite,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Black
-        )
-        Text(
-            text = event.mainEvent,
-            color = FpTextGray,
-            fontSize = 13.sp
-        )
-        Text(
-            text = "Таны сонгосон ${tier.titleMn} багцын хүрээнд энэхүү тусгай эвентийг үзэх эрх бүрэн нээгдсэн байна.",
-            color = Color(0xFF81C784),
-            fontSize = 12.sp
-        )
-
-        OutlinedButton(
-            onClick = onBack,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text(text = "Буцах", color = FpTextWhite)
+            Text(
+                text = when {
+                    isVipUnlocked -> "✓ VIP MEMBERSHIP ACTIVE"
+                    isLoggedIn -> "ACTIVATE VIP FIGHT PASS"
+                    else -> "НЭВТРЭЭД VIP ИДЭВХЖҮҮЛЭХ"
+                },
+                color = FpTextWhite,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.5.sp
+            )
         }
     }
 }
